@@ -18,6 +18,7 @@ class WorkflowMemory {
             status: 'pending',
             progress: 0,
             is_billing: 1,
+            is_deleted: false,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             completed_at: null,
@@ -32,6 +33,7 @@ class WorkflowMemory {
     
     findAll(page = 1, pageSize = 10) {
         const list = Array.from(this.workflows.values())
+            .filter(workflow => !workflow.is_deleted)
             .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         
         const total = list.length;
@@ -48,7 +50,8 @@ class WorkflowMemory {
     }
     
     findById(id) {
-        return this.workflows.get(id) || null;
+        const workflow = this.workflows.get(id);
+        return workflow && !workflow.is_deleted ? workflow : null;
     }
     
     updateStatus(id, status, progress = null, errorMessage = null) {
@@ -73,9 +76,13 @@ class WorkflowMemory {
     }
     
     delete(id) {
-        this.workflows.delete(id);
-        this.logs.delete(id);
-        return true;
+        const workflow = this.workflows.get(id);
+        if (workflow) {
+            workflow.is_deleted = true;
+            workflow.updated_at = new Date().toISOString();
+            return true;
+        }
+        return false;
     }
     
     addLog(workflowId, level, message) {

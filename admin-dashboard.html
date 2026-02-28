@@ -473,6 +473,13 @@
             cursor: not-allowed;
         }
 
+        /* 页码容器 */
+        #pageNumbers {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
         /* 列宽 */
         .col-checkbox { width: 40px; }
         .col-name { flex: 2; }
@@ -751,15 +758,15 @@
                     <!-- 分页 -->
                     <div class="pagination">
                         <div class="pagination-info" id="paginationInfo">总条数：0</div>
-                        <div class="pagination-controls">
-                            <select class="page-size">
-                                <option>10</option>
-                                <option>20</option>
-                                <option>50</option>
+                        <div class="pagination-controls" id="paginationControls">
+                            <select class="page-size" id="pageSizeSelect">
+                                <option value="10" selected>10条/页</option>
+                                <option value="20">20条/页</option>
+                                <option value="50">50条/页</option>
                             </select>
-                            <button class="page-btn" disabled>‹</button>
-                            <button class="page-btn active">1</button>
-                            <button class="page-btn" disabled>›</button>
+                            <button class="page-btn" id="prevPageBtn" onclick="goToPage(currentPage - 1)">‹</button>
+                            <div id="pageNumbers"></div>
+                            <button class="page-btn" id="nextPageBtn" onclick="goToPage(currentPage + 1)">›</button>
                         </div>
                     </div>
                 </div>
@@ -795,6 +802,26 @@
         </div>
     </div>
 
+    <!-- 任务详情模态框 -->
+    <div class="modal" id="taskDetailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">任务详情</h3>
+                <span class="modal-close" id="closeDetailModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="taskDetailContent">
+                    <div style="text-align: center; padding: 40px;">
+                        <div style="font-size: 14px; color: #999;">加载中...</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" id="closeDetailBtn">关闭</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 通知消息 -->
     <div class="notification" id="notification"></div>
 
@@ -805,6 +832,7 @@
         // 当前页码
         let currentPage = 1;
         let pageSize = 10;
+        let totalCount = 0; // 总条数
         
         // 状态映射
         const statusMap = {
@@ -815,6 +843,41 @@
             'paused': { text: '已暂停', class: 'status-paused' }
         };
         
+        // 格式化时间（根据用户所在时区显示）
+        function formatDateTime(dateString) {
+            if (!dateString) return '-';
+            
+            const date = new Date(dateString);
+            
+            // 检查日期是否有效
+            if (isNaN(date.getTime())) {
+                return '-';
+            }
+            
+            // 获取用户所在时区
+            const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            
+            // 格式化选项 - 使用本地时区
+            const options = {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            };
+            
+            // 格式化日期（使用本地时区）
+            const formatted = new Intl.DateTimeFormat('zh-CN', options).format(date);
+            
+            // 获取时区偏移（基于当前日期，因为夏令时可能会影响偏移量）
+            const offset = -date.getTimezoneOffset() / 60;
+            const offsetStr = offset >= 0 ? `UTC+${offset}` : `UTC${offset}`;
+            
+            return `${formatted} (${offsetStr})`;
+        }
+        
         // 获取任务列表
         async function fetchWorkflows() {
             try {
@@ -822,6 +885,7 @@
                 const result = await response.json();
                 
                 if (result.success) {
+                    totalCount = result.data.total; // 保存总条数
                     renderTable(result.data.list);
                     updatePagination(result.data.total);
                 }
@@ -872,7 +936,7 @@
                 <div class="table-cell col-name">
                     <div>
                         <div>${workflow.name}</div>
-                        <div style="font-size: 11px; color: #999;">${workflow.id}</div>
+                        <div style="font-size: 11px; color: #1890ff; cursor: pointer;" onclick="showTaskDetail('${workflow.id}')">${workflow.id}</div>
                     </div>
                 </div>
                 <div class="table-cell col-status">
@@ -897,6 +961,8 @@
                     <div class="action-btns">
                         ${workflow.status === 'running' ? 
                             `<button class="action-btn" onclick="pauseWorkflow('${workflow.id}')">暂停</button>` : 
+                            workflow.status === 'paused' ?
+                            `<button class="action-btn" onclick="resumeWorkflow('${workflow.id}')">恢复</button>` :
                             ''}
                         <button class="action-btn delete" onclick="deleteWorkflow('${workflow.id}')">删除</button>
                     </div>
@@ -908,7 +974,83 @@
         
         // 更新分页信息
         function updatePagination(total) {
-            document.getElementById('paginationInfo').textContent = `总条数：${total}`;
+            const totalPages = Math.ceil(total / pageSize);
+            
+            document.getElementById('paginationInfo').textContent = 
+                `总条数：${total} | 第 ${currentPage}/${totalPages} 页`;
+            
+            // 更新上一页/下一页按钮状态
+            document.getElementById('prevPageBtn').disabled = currentPage <= 1;
+            document.getElementById('nextPageBtn').disabled = currentPage >= totalPages || totalPages === 0;
+            
+            // 生成页码按钮
+            renderPageNumbers(totalPages);
+        }
+        
+        // 渲染页码按钮
+        function renderPageNumbers(totalPages) {
+            const pageNumbersContainer = document.getElementById('pageNumbers');
+            
+            if (totalPages <= 0) {
+                pageNumbersContainer.innerHTML = '';
+                return;
+            }
+            
+            let html = '';
+            
+            // 显示最多5个页码
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, startPage + 4);
+            
+            if (endPage - startPage < 4) {
+                startPage = Math.max(1, endPage - 4);
+            }
+            
+            // 第一页
+            if (startPage > 1) {
+                html += `<button class="page-btn" onclick="goToPage(1)">1</button>`;
+                if (startPage > 2) {
+                    html += `<span style="padding: 0 8px; color: #999;">...</span>`;
+                }
+            }
+            
+            // 中间页码
+            for (let i = startPage; i <= endPage; i++) {
+                if (i === currentPage) {
+                    html += `<button class="page-btn active">${i}</button>`;
+                } else {
+                    html += `<button class="page-btn" onclick="goToPage(${i})">${i}</button>`;
+                }
+            }
+            
+            // 最后一页
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    html += `<span style="padding: 0 8px; color: #999;">...</span>`;
+                }
+                html += `<button class="page-btn" onclick="goToPage(${totalPages})">${totalPages}</button>`;
+            }
+            
+            pageNumbersContainer.innerHTML = html;
+        }
+        
+        // 跳转到指定页
+        function goToPage(page) {
+            const totalPages = Math.ceil(totalCount / pageSize);
+            
+            if (page < 1 || page > totalPages) {
+                return;
+            }
+            
+            currentPage = page;
+            fetchWorkflows();
+        }
+        
+        // 更改每页显示条数
+        function changePageSize(newPageSize) {
+            pageSize = parseInt(newPageSize, 10);
+            currentPage = 1; // 重置到第一页
+            fetchWorkflows();
         }
         
         // 创建任务
@@ -972,6 +1114,120 @@
             }
         }
         
+        // 恢复工作流
+        async function resumeWorkflow(id) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/workflows/${id}/resume`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('任务已恢复', 'success');
+                    fetchWorkflows();
+                } else {
+                    showNotification(result.message || '恢复失败', 'error');
+                }
+            } catch (error) {
+                console.error('恢复任务失败:', error);
+                showNotification('恢复任务失败', 'error');
+            }
+        }
+        
+        // 显示任务详情
+        async function showTaskDetail(id) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/workflows/${id}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const task = result.data;
+                    const statusInfo = statusMap[task.status] || statusMap['pending'];
+                    
+                    let logsHtml = '';
+                    if (task.logs && task.logs.length > 0) {
+                        logsHtml = `
+                            <div style="margin-top: 20px;">
+                                <h4 style="margin-bottom: 12px; font-size: 14px; font-weight: 500;">执行日志</h4>
+                                <div style="border: 1px solid #e8e8e8; border-radius: 4px; max-height: 200px; overflow-y: auto;">
+                                    ${task.logs.map(log => `
+                                        <div style="padding: 8px 12px; border-bottom: 1px solid #f0f0f0;">
+                                            <div style="font-size: 12px; color: #999; margin-bottom: 4px;">${formatDateTime(log.created_at)}</div>
+                                            <div style="font-size: 13px; color: ${log.level === 'error' ? '#f5222d' : log.level === 'warning' ? '#fa8c16' : '#333'};">
+                                                ${log.message}
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    document.getElementById('taskDetailContent').innerHTML = `
+                        <div style="display: grid; grid-template-columns: 120px 1fr; gap: 12px 24px;">
+                            <div style="font-size: 13px; color: #666;">任务名称:</div>
+                            <div style="font-size: 13px;">${task.name}</div>
+                            
+                            <div style="font-size: 13px; color: #666;">任务ID:</div>
+                            <div style="font-size: 13px; font-family: monospace;">${task.id}</div>
+                            
+                            <div style="font-size: 13px; color: #666;">当前状态:</div>
+                            <div>
+                                <span class="status-tag ${statusInfo.class}">
+                                    <span style="width: 6px; height: 6px; border-radius: 50%; background-color: currentColor;"></span>
+                                    ${statusInfo.text}
+                                </span>
+                            </div>
+                            
+                            <div style="font-size: 13px; color: #666;">执行进度:</div>
+                            <div>
+                                <div class="progress-bar" style="width: 200px;">
+                                    <div class="progress-fill" style="width: ${task.progress || 0}%"></div>
+                                </div>
+                                <span style="margin-left: 8px; font-size: 11px; color: #666;">${task.progress || 0}%</span>
+                            </div>
+                            
+                            <div style="font-size: 13px; color: #666;">是否计费中:</div>
+                            <div>${task.is_billing ? '<span style="color: #52c41a;">是</span>' : '<span style="color: #999;">否</span>'}</div>
+                            
+                            <div style="font-size: 13px; color: #666;">源连接:</div>
+                            <div style="font-size: 13px; word-break: break-all;">${task.source_connection}</div>
+                            
+                            <div style="font-size: 13px; color: #666;">目标连接:</div>
+                            <div style="font-size: 13px; word-break: break-all;">${task.target_connection}</div>
+                            
+                            <div style="font-size: 13px; color: #666;">创建时间:</div>
+                            <div style="font-size: 13px;">${formatDateTime(task.created_at)}</div>
+                            
+                            ${task.updated_at ? `
+                                <div style="font-size: 13px; color: #666;">更新时间:</div>
+                                <div style="font-size: 13px;">${formatDateTime(task.updated_at)}</div>
+                            ` : ''}
+                            
+                            ${task.completed_at ? `
+                                <div style="font-size: 13px; color: #666;">完成时间:</div>
+                                <div style="font-size: 13px;">${formatDateTime(task.completed_at)}</div>
+                            ` : ''}
+                        </div>
+                        ${logsHtml}
+                    `;
+                    
+                    document.getElementById('taskDetailModal').classList.add('show');
+                } else {
+                    showNotification(result.message || '获取任务详情失败', 'error');
+                }
+            } catch (error) {
+                console.error('获取任务详情失败:', error);
+                showNotification('获取任务详情失败', 'error');
+            }
+        }
+        
+        // 关闭详情模态框
+        function closeDetailModal() {
+            document.getElementById('taskDetailModal').classList.remove('show');
+        }
+        
         // 删除工作流
         async function deleteWorkflow(id) {
             if (!confirm('确定要删除这个任务吗？')) {
@@ -1032,10 +1288,25 @@
         document.getElementById('confirmBtn').addEventListener('click', createTask);
         document.getElementById('refreshBtn').addEventListener('click', fetchWorkflows);
         
+        // 分页控件事件
+        document.getElementById('pageSizeSelect').addEventListener('change', (e) => {
+            changePageSize(e.target.value);
+        });
+        
+        // 详情模态框事件
+        document.getElementById('closeDetailModal').addEventListener('click', closeDetailModal);
+        document.getElementById('closeDetailBtn').addEventListener('click', closeDetailModal);
+        
         // 点击模态框外部关闭
         document.getElementById('createTaskModal').addEventListener('click', (e) => {
             if (e.target.id === 'createTaskModal') {
                 closeModal();
+            }
+        });
+        
+        document.getElementById('taskDetailModal').addEventListener('click', (e) => {
+            if (e.target.id === 'taskDetailModal') {
+                closeDetailModal();
             }
         });
         

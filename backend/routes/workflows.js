@@ -116,6 +116,27 @@ router.post('/:id/pause', async (req, res) => {
     }
 });
 
+// 恢复任务
+router.post('/:id/resume', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        await workflowExecutor.startWorkflow(id);
+        
+        res.json({
+            success: true,
+            message: '任务已恢复'
+        });
+    } catch (error) {
+        console.error('恢复任务失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '恢复任务失败',
+            error: error.message
+        });
+    }
+});
+
 // 删除任务
 router.delete('/:id', async (req, res) => {
     try {

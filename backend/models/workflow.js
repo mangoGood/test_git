@@ -29,11 +29,11 @@ class Workflow {
         const offset = (p - 1) * ps;
         
         const [workflows] = await pool.execute(
-            `SELECT * FROM workflows ORDER BY created_at DESC LIMIT ${ps} OFFSET ${offset}`
+            `SELECT * FROM workflows WHERE is_deleted = 0 ORDER BY created_at DESC LIMIT ${ps} OFFSET ${offset}`
         );
         
         const [countResult] = await pool.execute(
-            `SELECT COUNT(*) as total FROM workflows`
+            `SELECT COUNT(*) as total FROM workflows WHERE is_deleted = 0`
         );
         
         return {
@@ -47,7 +47,7 @@ class Workflow {
     // 根据ID获取工作流
     static async findById(id) {
         const [rows] = await pool.execute(
-            `SELECT * FROM workflows WHERE id = ?`,
+            `SELECT * FROM workflows WHERE id = ? AND is_deleted = 0`,
             [id]
         );
         return rows[0] || null;
@@ -79,10 +79,10 @@ class Workflow {
         return result.affectedRows > 0;
     }
     
-    // 删除工作流
+    // 删除工作流（软删除）
     static async delete(id) {
         const [result] = await pool.execute(
-            `DELETE FROM workflows WHERE id = ?`,
+            `UPDATE workflows SET is_deleted = 1 WHERE id = ? AND is_deleted = 0`,
             [id]
         );
         return result.affectedRows > 0;
