@@ -1,4 +1,4 @@
-const Workflow = require('../models/workflow-memory');
+const Workflow = require('../models/workflow');
 
 // 模拟工作流执行器
 class WorkflowExecutor {

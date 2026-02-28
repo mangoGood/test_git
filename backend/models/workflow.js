@@ -1,6 +1,12 @@
 const pool = require('../config/database');
 const { v4: uuidv4 } = require('uuid');
 
+// 辅助函数：确保值为整数
+function toInt(value) {
+    const num = parseInt(value, 10);
+    return isNaN(num) ? 0 : num;
+}
+
 class Workflow {
     // 创建新的工作流
     static async create(data) {
@@ -18,11 +24,12 @@ class Workflow {
     
     // 获取所有工作流
     static async findAll(page = 1, pageSize = 10) {
-        const offset = (page - 1) * pageSize;
+        const p = toInt(page);
+        const ps = toInt(pageSize);
+        const offset = (p - 1) * ps;
         
         const [workflows] = await pool.execute(
-            `SELECT * FROM workflows ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-            [pageSize, offset]
+            `SELECT * FROM workflows ORDER BY created_at DESC LIMIT ${ps} OFFSET ${offset}`
         );
         
         const [countResult] = await pool.execute(

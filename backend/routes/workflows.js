@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Workflow = require('../models/workflow-memory');
+const Workflow = require('../models/workflow');
 const workflowExecutor = require('../services/workflowService');
 
 // 创建新的同步任务
