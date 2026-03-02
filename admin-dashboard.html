@@ -1022,9 +1022,9 @@
                 </div>
                 <div class="table-cell col-action">
                     <div class="action-btns">
-                        ${workflow.status === 'running' ? 
+                        ${workflow.status === 'RUNNING' ? 
                             `<button class="action-btn" onclick="pauseWorkflow('${workflow.id}')">暂停</button>` : 
-                            workflow.status === 'paused' ?
+                            workflow.status === 'PAUSED' ?
                             `<button class="action-btn" onclick="resumeWorkflow('${workflow.id}')">恢复</button>` :
                             ''}
                         <button class="action-btn delete" onclick="deleteWorkflow('${workflow.id}')">删除</button>

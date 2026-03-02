@@ -20,6 +20,24 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
 
+  kafka:
+    bootstrap-servers: 192.168.117.2:19092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+    consumer:
+      group-id: sync-task-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      auto-offset-reset: earliest
+      properties:
+        spring.json.trusted.packages: "com.synctask.dto"
+    topics:
+      task-created: sync-task-created
+      task-status: sync-task-status
+
   security:
     user:
       name: admin

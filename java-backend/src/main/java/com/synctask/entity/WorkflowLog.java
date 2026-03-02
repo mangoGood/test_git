@@ -13,7 +13,7 @@ public class WorkflowLog {
     @Column(name = "workflow_id", length = 36)
     private String workflowId;
 
-    @Convert(converter = LogLevelConverter.class)
+    @Enumerated(EnumType.STRING)
     private LogLevel level = LogLevel.INFO;
 
     @Column(columnDefinition = "TEXT")

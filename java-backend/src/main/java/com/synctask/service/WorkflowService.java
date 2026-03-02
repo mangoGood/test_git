@@ -9,7 +9,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -22,6 +21,9 @@ public class WorkflowService {
 
     @Autowired
     private WorkflowLogRepository workflowLogRepository;
+
+    @Autowired
+    private KafkaProducerService kafkaProducerService;
 
     @Transactional
     public Workflow createWorkflow(String name, String sourceConnection, String targetConnection, Long userId) {
@@ -37,7 +39,14 @@ public class WorkflowService {
 
         Workflow savedWorkflow = workflowRepository.save(workflow);
         
-        startWorkflowAsync(savedWorkflow.getId());
+        addLog(savedWorkflow.getId(), WorkflowLog.LogLevel.INFO, "任务创建成功，状态: 创建中");
+        
+        try {
+            kafkaProducerService.sendTaskCreatedMessage(savedWorkflow);
+            addLog(savedWorkflow.getId(), WorkflowLog.LogLevel.INFO, "任务消息已发送到 Kafka topic: sync-task-created，等待任务执行服务处理");
+        } catch (Exception e) {
+            addLog(savedWorkflow.getId(), WorkflowLog.LogLevel.WARNING, "Kafka 消息发送失败: " + e.getMessage());
+        }
         
         return savedWorkflow;
     }
@@ -68,7 +77,7 @@ public class WorkflowService {
         Workflow workflow = getWorkflowById(id, userId);
         workflow.setStatus(WorkflowStatus.PAUSED);
         workflowRepository.save(workflow);
-        addLog(workflow.getId(), WorkflowLog.LogLevel.INFO, "任务已暂停");
+        addLog(workflow.getId(), WorkflowLog.LogLevel.INFO, "任务已暂停，状态: 暂停中");
     }
 
     @Transactional
@@ -76,63 +85,13 @@ public class WorkflowService {
         Workflow workflow = getWorkflowById(id, userId);
         workflow.setStatus(WorkflowStatus.RUNNING);
         workflowRepository.save(workflow);
-        addLog(workflow.getId(), WorkflowLog.LogLevel.INFO, "任务已恢复");
-        startWorkflowAsync(id);
+        addLog(workflow.getId(), WorkflowLog.LogLevel.INFO, "任务已恢复，等待任务执行服务处理");
     }
 
     @Transactional
     public void deleteWorkflow(String id, Long userId) {
         Workflow workflow = getWorkflowById(id, userId);
         workflowRepository.delete(workflow);
-    }
-
-    @Async
-    protected void startWorkflowAsync(String workflowId) {
-        try {
-            Thread.sleep(1000);
-            
-            Workflow workflow = workflowRepository.findById(workflowId).orElse(null);
-            if (workflow == null || workflow.getStatus() == WorkflowStatus.PAUSED) {
-                return;
-            }
-            
-            workflow.setStatus(WorkflowStatus.RUNNING);
-            workflowRepository.save(workflow);
-            addLog(workflowId, WorkflowLog.LogLevel.INFO, "任务开始执行");
-            
-            for (int i = 1; i <= 10; i++) {
-                Thread.sleep(500);
-                
-                workflow = workflowRepository.findById(workflowId).orElse(null);
-                if (workflow == null || workflow.getStatus() == WorkflowStatus.PAUSED) {
-                    return;
-                }
-                
-                workflow.setProgress(i * 10);
-                workflowRepository.save(workflow);
-                addLog(workflowId, WorkflowLog.LogLevel.INFO, "任务执行进度: " + (i * 10) + "%");
-            }
-            
-            workflow = workflowRepository.findById(workflowId).orElse(null);
-            if (workflow != null && workflow.getStatus() != WorkflowStatus.PAUSED) {
-                workflow.setStatus(WorkflowStatus.COMPLETED);
-                workflow.setProgress(100);
-                workflow.setIsBilling(false);
-                workflowRepository.save(workflow);
-                addLog(workflowId, WorkflowLog.LogLevel.INFO, "任务执行完成");
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        } catch (Exception e) {
-            Workflow workflow = workflowRepository.findById(workflowId).orElse(null);
-            if (workflow != null) {
-                workflow.setStatus(WorkflowStatus.FAILED);
-                workflow.setErrorMessage(e.getMessage());
-                workflow.setIsBilling(false);
-                workflowRepository.save(workflow);
-                addLog(workflowId, WorkflowLog.LogLevel.ERROR, "任务执行失败: " + e.getMessage());
-            }
-        }
     }
 
     private void addLog(String workflowId, WorkflowLog.LogLevel level, String message) {
