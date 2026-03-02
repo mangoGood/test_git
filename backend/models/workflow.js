@@ -1,12 +1,6 @@
 const pool = require('../config/database');
 const { v4: uuidv4 } = require('uuid');
 
-// 辅助函数：确保值为整数
-function toInt(value) {
-    const num = parseInt(value, 10);
-    return isNaN(num) ? 0 : num;
-}
-
 class Workflow {
     // 创建新的工作流
     static async create(data) {
@@ -24,16 +18,15 @@ class Workflow {
     
     // 获取所有工作流
     static async findAll(page = 1, pageSize = 10) {
-        const p = toInt(page);
-        const ps = toInt(pageSize);
-        const offset = (p - 1) * ps;
+        const offset = (page - 1) * pageSize;
         
         const [workflows] = await pool.execute(
-            `SELECT * FROM workflows WHERE is_deleted = 0 ORDER BY created_at DESC LIMIT ${ps} OFFSET ${offset}`
+            `SELECT * FROM workflows ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+            [pageSize, offset]
         );
         
         const [countResult] = await pool.execute(
-            `SELECT COUNT(*) as total FROM workflows WHERE is_deleted = 0`
+            `SELECT COUNT(*) as total FROM workflows`
         );
         
         return {
@@ -47,7 +40,7 @@ class Workflow {
     // 根据ID获取工作流
     static async findById(id) {
         const [rows] = await pool.execute(
-            `SELECT * FROM workflows WHERE id = ? AND is_deleted = 0`,
+            `SELECT * FROM workflows WHERE id = ?`,
             [id]
         );
         return rows[0] || null;
@@ -79,10 +72,10 @@ class Workflow {
         return result.affectedRows > 0;
     }
     
-    // 删除工作流（软删除）
+    // 删除工作流
     static async delete(id) {
         const [result] = await pool.execute(
-            `UPDATE workflows SET is_deleted = 1 WHERE id = ? AND is_deleted = 0`,
+            `DELETE FROM workflows WHERE id = ?`,
             [id]
         );
         return result.affectedRows > 0;

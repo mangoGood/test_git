@@ -682,6 +682,10 @@
                     <span class="header-link">
                         <span>使用指南</span>
                     </span>
+                    <div class="user-info" id="userInfo" style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #666;">
+                        <span id="usernameDisplay"></span>
+                        <button class="btn-logout" onclick="logout()" style="padding: 4px 12px; background: #f5f5f5; border: 1px solid #d9d9d9; border-radius: 4px; cursor: pointer; font-size: 12px;">退出</button>
+                    </div>
                     <button class="btn-primary" id="createTaskBtn">创建同步任务</button>
                 </div>
             </header>
@@ -827,7 +831,7 @@
 
     <script>
         // API基础URL
-        const API_BASE_URL = 'http://localhost:3000/api';
+        const API_BASE_URL = 'http://localhost:8082/api';
         
         // 当前页码
         let currentPage = 1;
@@ -836,12 +840,52 @@
         
         // 状态映射
         const statusMap = {
-            'pending': { text: '等待中', class: 'status-pending' },
-            'running': { text: '运行中', class: 'status-running' },
-            'completed': { text: '已完成', class: 'status-completed' },
-            'failed': { text: '失败', class: 'status-failed' },
-            'paused': { text: '已暂停', class: 'status-paused' }
+            'PENDING': { text: '等待中', class: 'status-pending' },
+            'RUNNING': { text: '运行中', class: 'status-running' },
+            'COMPLETED': { text: '已完成', class: 'status-completed' },
+            'FAILED': { text: '失败', class: 'status-failed' },
+            'PAUSED': { text: '已暂停', class: 'status-paused' }
         };
+        
+        // 检查登录状态
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'login.html';
+                return false;
+            }
+            return true;
+        }
+        
+        // 获取当前用户信息
+        function getCurrentUser() {
+            const userStr = localStorage.getItem('user');
+            return userStr ? JSON.parse(userStr) : null;
+        }
+        
+        // 显示用户信息
+        function displayUserInfo() {
+            const user = getCurrentUser();
+            if (user) {
+                document.getElementById('usernameDisplay').textContent = user.username;
+            }
+        }
+        
+        // 退出登录
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = 'login.html';
+        }
+        
+        // 获取请求头（包含认证信息）
+        function getAuthHeaders() {
+            const token = localStorage.getItem('token');
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : ''
+            };
+        }
         
         // 格式化时间（根据用户所在时区显示）
         function formatDateTime(dateString) {
@@ -880,12 +924,26 @@
         
         // 获取任务列表
         async function fetchWorkflows() {
+            if (!checkAuth()) return;
+            
             try {
-                const response = await fetch(`${API_BASE_URL}/workflows?page=${currentPage}&pageSize=${pageSize}`);
+                const response = await fetch(`${API_BASE_URL}/workflows?page=${currentPage}&pageSize=${pageSize}`, {
+                    headers: getAuthHeaders()
+                });
+                
+                if (response.status === 401) {
+                    // Token 过期或无效，跳转到登录页
+                    logout();
+                    return;
+                }
+                
                 const result = await response.json();
+                console.log('API 返回结果:', result);
                 
                 if (result.success) {
-                    totalCount = result.data.total; // 保存总条数
+                    totalCount = result.data.total;
+                    console.log('任务列表:', result.data.list);
+                    console.log('总数:', result.data.total);
                     renderTable(result.data.list);
                     updatePagination(result.data.total);
                 }
@@ -897,17 +955,22 @@
         
         // 渲染表格
         function renderTable(workflows) {
+            console.log('renderTable 被调用，workflows:', workflows);
             const tableBody = document.getElementById('tableBody');
             const emptyState = document.getElementById('emptyState');
             
-            if (workflows.length === 0) {
+            console.log('tableBody:', tableBody);
+            console.log('emptyState:', emptyState);
+            
+            if (!workflows || workflows.length === 0) {
+                console.log('没有数据，显示空状态');
                 emptyState.style.display = 'flex';
-                // 清除已有的表格行
                 const existingRows = tableBody.querySelectorAll('.table-row');
                 existingRows.forEach(row => row.remove());
                 return;
             }
             
+            console.log('有数据，开始渲染');
             emptyState.style.display = 'none';
             
             // 清除已有的表格行
@@ -1053,8 +1116,17 @@
             fetchWorkflows();
         }
         
+        let isSubmitting = false;
+        
         // 创建任务
         async function createTask() {
+            if (!checkAuth()) return;
+            
+            if (isSubmitting) {
+                showNotification('正在提交中，请稍候...', 'error');
+                return;
+            }
+            
             const name = document.getElementById('taskName').value.trim();
             const sourceConnection = document.getElementById('sourceConnection').value.trim();
             const targetConnection = document.getElementById('targetConnection').value.trim();
@@ -1064,18 +1136,26 @@
                 return;
             }
             
+            isSubmitting = true;
+            const confirmBtn = document.getElementById('confirmBtn');
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = '创建中...';
+            
             try {
                 const response = await fetch(`${API_BASE_URL}/workflows`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify({
                         name,
                         sourceConnection: sourceConnection || 'default-source',
                         targetConnection: targetConnection || 'default-target'
                     })
                 });
+                
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
                 
                 const result = await response.json();
                 
@@ -1090,15 +1170,27 @@
             } catch (error) {
                 console.error('创建任务失败:', error);
                 showNotification('创建任务失败', 'error');
+            } finally {
+                isSubmitting = false;
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = '创建';
             }
         }
         
         // 暂停工作流
         async function pauseWorkflow(id) {
+            if (!checkAuth()) return;
+            
             try {
                 const response = await fetch(`${API_BASE_URL}/workflows/${id}/pause`, {
-                    method: 'POST'
+                    method: 'POST',
+                    headers: getAuthHeaders()
                 });
+                
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
                 
                 const result = await response.json();
                 
@@ -1116,10 +1208,18 @@
         
         // 恢复工作流
         async function resumeWorkflow(id) {
+            if (!checkAuth()) return;
+            
             try {
                 const response = await fetch(`${API_BASE_URL}/workflows/${id}/resume`, {
-                    method: 'POST'
+                    method: 'POST',
+                    headers: getAuthHeaders()
                 });
+                
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
                 
                 const result = await response.json();
                 
@@ -1137,8 +1237,18 @@
         
         // 显示任务详情
         async function showTaskDetail(id) {
+            if (!checkAuth()) return;
+            
             try {
-                const response = await fetch(`${API_BASE_URL}/workflows/${id}`);
+                const response = await fetch(`${API_BASE_URL}/workflows/${id}`, {
+                    headers: getAuthHeaders()
+                });
+                
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+                
                 const result = await response.json();
                 
                 if (result.success) {
@@ -1230,14 +1340,22 @@
         
         // 删除工作流
         async function deleteWorkflow(id) {
+            if (!checkAuth()) return;
+            
             if (!confirm('确定要删除这个任务吗？')) {
                 return;
             }
             
             try {
                 const response = await fetch(`${API_BASE_URL}/workflows/${id}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
                 });
+                
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
                 
                 const result = await response.json();
                 
@@ -1312,7 +1430,11 @@
         
         // 页面加载时获取任务列表
         document.addEventListener('DOMContentLoaded', () => {
-            fetchWorkflows();
+            // 检查登录状态并显示用户信息
+            if (checkAuth()) {
+                displayUserInfo();
+                fetchWorkflows();
+            }
             
             // 定时刷新任务状态
             setInterval(fetchWorkflows, 5000);

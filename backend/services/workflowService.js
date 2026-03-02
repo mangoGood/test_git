@@ -13,42 +13,27 @@ class WorkflowExecutor {
             return;
         }
         
-        // 获取当前工作流信息
-        const workflow = await Workflow.findById(workflowId);
-        if (!workflow) {
-            return;
-        }
-        
-        // 获取当前进度，默认为0
-        const currentProgress = workflow.progress || 0;
-        
-        // 更新状态为运行中，保持当前进度
-        await Workflow.updateStatus(workflowId, 'running', currentProgress);
-        
-        // 记录日志
-        if (currentProgress > 0) {
-            await Workflow.addLog(workflowId, 'info', `工作流从 ${currentProgress}% 开始恢复执行`);
-        } else {
-            await Workflow.addLog(workflowId, 'info', '工作流开始执行');
-        }
+        // 更新状态为运行中
+        await Workflow.updateStatus(workflowId, 'running', 0);
+        await Workflow.addLog(workflowId, 'info', '工作流开始执行');
         
         // 创建工作流执行上下文
         const workflowContext = {
             id: workflowId,
-            progress: currentProgress,
+            progress: 0,
             timer: null
         };
         
         this.runningWorkflows.set(workflowId, workflowContext);
         
         // 模拟工作流执行过程
-        this.simulateExecution(workflowId, currentProgress);
+        this.simulateExecution(workflowId);
         
         return workflowContext;
     }
     
     // 模拟执行过程
-    async simulateExecution(workflowId, startProgress = 0) {
+    async simulateExecution(workflowId) {
         const stages = [
             { progress: 10, message: '正在连接源数据库...', delay: 2000 },
             { progress: 20, message: '正在连接目标数据库...', delay: 2000 },
@@ -60,17 +45,7 @@ class WorkflowExecutor {
             { progress: 100, message: '同步任务完成', delay: 1000 }
         ];
         
-        // 找到当前进度对应的阶段，从下一个阶段开始
-        let startIndex = 0;
-        for (let i = 0; i < stages.length; i++) {
-            if (stages[i].progress > startProgress) {
-                startIndex = i;
-                break;
-            }
-        }
-        
-        for (let i = startIndex; i < stages.length; i++) {
-            const stage = stages[i];
+        for (const stage of stages) {
             await this.delay(stage.delay);
             
             // 检查工作流是否被取消
