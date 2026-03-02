@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实时同步管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* 侧边栏 */
+        .sidebar {
+            width: 200px;
+            background-color: #fff;
+            border-right: 1px solid #e8e8e8;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid #e8e8e8;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .sidebar-header .title {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .sidebar-menu {
+            padding: 8px 0;
+        }
+
+        .menu-section {
+            margin-bottom: 8px;
+        }
+
+        .menu-title {
+            padding: 8px 16px;
+            font-size: 12px;
+            color: #999;
+            font-weight: 500;
+        }
+
+        .menu-item {
+            padding: 10px 16px 10px 32px;
+            font-size: 13px;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .menu-item:hover {
+            color: #1890ff;
+            background-color: #e6f7ff;
+        }
+
+        .menu-item.active {
+            color: #1890ff;
+            background-color: #e6f7ff;
+            border-right: 2px solid #1890ff;
+        }
+
+        /* 主内容区 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 顶部栏 */
+        .header {
+            background-color: #fff;
+            padding: 16px 24px;
+            border-bottom: 1px solid #e8e8e8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-title {
+            font-size: 16px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .help-icon {
+            width: 16px;
+            height: 16px;
+            border: 1px solid #d9d9d9;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: #999;
+            cursor: pointer;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header-link {
+            font-size: 13px;
+            color: #666;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .header-link:hover {
+            color: #1890ff;
+        }
+
+        .btn-primary {
+            background-color: #262626;
+            color: #fff;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover {
+            background-color: #444;
+        }
+
+        .btn-primary:disabled {
+            background-color: #999;
+            cursor: not-allowed;
+        }
+
+        /* 内容区 */
+        .content {
+            padding: 24px;
+            flex: 1;
+        }
+
+        /* 操作栏 */
+        .toolbar {
+            background-color: #fff;
+            padding: 16px 24px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+        }
+
+        .toolbar-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .toolbar-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .btn {
+            padding: 5px 15px;
+            border: 1px solid #d9d9d9;
+            background-color: #fff;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            border-color: #1890ff;
+            color: #1890ff;
+        }
+
+        .btn-default {
+            color: #666;
+        }
+
+        .search-box {
+            flex: 1;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 5px 12px 5px 32px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: #1890ff;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            font-size: 14px;
+        }
+
+        .toolbar-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            width: 32px;
+            height: 32px;
+            border: 1px solid #d9d9d9;
+            background-color: #fff;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #666;
+            transition: all 0.2s;
+        }
+
+        .icon-btn:hover {
+            border-color: #1890ff;
+            color: #1890ff;
+        }
+
+        /* 表格区域 */
+        .table-container {
+            background-color: #fff;
+            border-radius: 4px;
+            min-height: 400px;
+        }
+
+        .table-header {
+            display: flex;
+            padding: 12px 24px;
+            border-bottom: 1px solid #e8e8e8;
+            background-color: #fafafa;
+            font-size: 13px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .table-header-cell {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .table-body {
+            min-height: 200px;
+        }
+
+        .table-row {
+            display: flex;
+            padding: 12px 24px;
+            border-bottom: 1px solid #e8e8e8;
+            font-size: 13px;
+            color: #333;
+            align-items: center;
+        }
+
+        .table-row:hover {
+            background-color: #fafafa;
+        }
+
+        .table-cell {
+            display: flex;
+            align-items: center;
+        }
+
+        .checkbox {
+            width: 16px;
+            height: 16px;
+            border: 1px solid #d9d9d9;
+            border-radius: 2px;
+            cursor: pointer;
+        }
+
+        .sort-icon {
+            font-size: 10px;
+            color: #999;
+        }
+
+        /* 状态标签 */
+        .status-tag {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-pending {
+            background-color: #fff7e6;
+            color: #fa8c16;
+            border: 1px solid #ffd591;
+        }
+
+        .status-running {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border: 1px solid #91d5ff;
+        }
+
+        .status-completed {
+            background-color: #f6ffed;
+            color: #52c41a;
+            border: 1px solid #b7eb8f;
+        }
+
+        .status-failed {
+            background-color: #fff1f0;
+            color: #f5222d;
+            border: 1px solid #ffa39e;
+        }
+
+        .status-paused {
+            background-color: #f5f5f5;
+            color: #666;
+            border: 1px solid #d9d9d9;
+        }
+
+        /* 进度条 */
+        .progress-bar {
+            width: 100px;
+            height: 6px;
+            background-color: #f5f5f5;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: #1890ff;
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+
+        /* 操作按钮 */
+        .action-btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            padding: 2px 8px;
+            font-size: 12px;
+            border: 1px solid #d9d9d9;
+            background-color: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .action-btn:hover {
+            border-color: #1890ff;
+            color: #1890ff;
+        }
+
+        .action-btn.delete:hover {
+            border-color: #f5222d;
+            color: #f5222d;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 80px 0;
+        }
+
+        .empty-icon {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 16px;
+        }
+
+        .empty-icon svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .empty-text {
+            font-size: 14px;
+            color: #999;
+        }
+
+        /* 分页 */
+        .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            border-top: 1px solid #e8e9e8;
+        }
+
+        .pagination-info {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .page-size {
+            padding: 4px 8px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #666;
+            background-color: #fff;
+        }
+
+        .page-btn {
+            width: 28px;
+            height: 28px;
+            border: 1px solid #d9d9d9;
+            background-color: #fff;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .page-btn.active {
+            background-color: #1890ff;
+            color: #fff;
+            border-color: #1890ff;
+        }
+
+        .page-btn:disabled {
+            color: #d9d9d9;
+            cursor: not-allowed;
+        }
+
+        /* 页码容器 */
+        #pageNumbers {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* 列宽 */
+        .col-checkbox { width: 40px; }
+        .col-name { flex: 2; }
+        .col-status { flex: 1; }
+        .col-monitor { flex: 1; }
+        .col-billing { flex: 1; }
+        .col-more { flex: 2; }
+        .col-action { width: 120px; text-align: right; }
+
+        /* 模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            border-radius: 8px;
+            width: 500px;
+            max-width: 90%;
+        }
+
+        .modal-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid #e8e8e8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .modal-close {
+            font-size: 20px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: #333;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #1890ff;
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #e8e8e8;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .btn-cancel {
+            padding: 6px 16px;
+            border: 1px solid #d9d9d9;
+            background-color: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn-confirm {
+            padding: 6px 16px;
+            background-color: #1890ff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn-confirm:hover {
+            background-color: #40a9ff;
+        }
+
+        /* 通知消息 */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-size: 13px;
+            z-index: 2000;
+            display: none;
+        }
+
+        .notification.show {
+            display: block;
+        }
+
+        .notification.success {
+            background-color: #f6ffed;
+            border: 1px solid #b7eb8f;
+            color: #52c41a;
+        }
+
+        .notification.error {
+            background-color: #fff1f0;
+            border: 1px solid #ffa39e;
+            color: #f5222d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 侧边栏 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="title">以消费的服务</div>
+            </div>
+            <nav class="sidebar-menu">
+                <div class="menu-section">
+                    <div class="menu-title">总览</div>
+                </div>
+                
+                <div class="menu-section">
+                    <div class="menu-title">迁移旅程</div>
+                    <div class="menu-item">EA Migration Hub</div>
+                </div>
+                
+                <div class="menu-section">
+                    <div class="menu-title">任务管理</div>
+                    <div class="menu-item active">实时同步管理</div>
+                    <div class="menu-item">实时迁移管理</div>
+                    <div class="menu-item">备份迁移管理</div>
+                    <div class="menu-item">实时灾备管理</div>
+                </div>
+                
+                <div class="menu-section">
+                    <div class="menu-title">录制回放</div>
+                    <div class="menu-item">录制回放管理</div>
+                </div>
+                
+                <div class="menu-section">
+                    <div class="menu-title">应用迁移</div>
+                    <div class="menu-item">数据库和应用迁移</div>
+                </div>
+                
+                <div class="menu-section">
+                    <div class="menu-title">数据订阅</div>
+                    <div class="menu-item">数据订阅管理</div>
+                </div>
+                
+                <div class="menu-section">
+                    <div class="menu-title">其他</div>
+                    <div class="menu-item">校验任务管理</div>
+                    <div class="menu-item">连接信息管理</div>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 顶部栏 -->
+            <header class="header">
+                <div class="header-left">
+                    <h1 class="header-title">实时同步管理</h1>
+                    <span class="help-icon">?</span>
+                </div>
+                <div class="header-right">
+                    <span class="header-link">
+                        <span>满意度评价</span>
+                    </span>
+                    <span class="header-link">
+                        <span>使用指南</span>
+                    </span>
+                    <div class="user-info" id="userInfo" style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #666;">
+                        <span id="usernameDisplay"></span>
+                        <button class="btn-logout" onclick="logout()" style="padding: 4px 12px; background: #f5f5f5; border: 1px solid #d9d9d9; border-radius: 4px; cursor: pointer; font-size: 12px;">退出</button>
+                    </div>
+                    <button class="btn-primary" id="createTaskBtn">创建同步任务</button>
+                </div>
+            </header>
+
+            <!-- 内容区 -->
+            <div class="content">
+                <!-- 操作栏 -->
+                <div class="toolbar">
+                    <div class="toolbar-row">
+                        <button class="btn btn-default">
+                            批量操作
+                            <span>▼</span>
+                        </button>
+                        <button class="btn btn-default">查看异常任务</button>
+                        <button class="btn btn-default">批量导入任务</button>
+                        <button class="btn btn-default">导出</button>
+                        <button class="btn btn-default">导出创建模板</button>
+                        <button class="btn btn-default">下载创建模板</button>
+                    </div>
+                    <div class="toolbar-row">
+                        <div class="search-box">
+                            <span class="search-icon">🔍</span>
+                            <input type="text" class="search-input" placeholder="添加筛选条件">
+                        </div>
+                        <div class="toolbar-actions">
+                            <button class="icon-btn" id="refreshBtn" title="刷新">↻</button>
+                            <button class="icon-btn" title="设置">⚙</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 表格区域 -->
+                <div class="table-container">
+                    <div class="table-header">
+                        <div class="table-header-cell col-checkbox">
+                            <div class="checkbox"></div>
+                        </div>
+                        <div class="table-header-cell col-name">
+                            名称/ID
+                            <span class="sort-icon">⇅</span>
+                        </div>
+                        <div class="table-header-cell col-status">
+                            状态
+                            <span class="sort-icon">⇅</span>
+                        </div>
+                        <div class="table-header-cell col-monitor">监控信息</div>
+                        <div class="table-header-cell col-billing">
+                            是否计费中
+                            <span class="sort-icon">⇅</span>
+                        </div>
+                        <div class="table-header-cell col-more">进度</div>
+                        <div class="table-header-cell col-action">操作</div>
+                    </div>
+
+                    <!-- 表格内容 -->
+                    <div class="table-body" id="tableBody">
+                        <!-- 空状态 -->
+                        <div class="empty-state" id="emptyState">
+                            <div class="empty-icon">
+                                <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="15" y="25" width="50" height="40" rx="2" stroke="#d9d9d9" stroke-width="2" fill="none"/>
+                                    <rect x="20" y="20" width="40" height="8" rx="1" stroke="#d9d9d9" stroke-width="2" fill="none"/>
+                                    <line x1="25" y1="45" x2="55" y2="45" stroke="#d9d9d9" stroke-width="2"/>
+                                    <line x1="25" y1="52" x2="45" y2="52" stroke="#d9d9d9" stroke-width="2"/>
+                                    <path d="M55 15 L60 10" stroke="#d9d9d9" stroke-width="2"/>
+                                    <path d="M60 15 L65 10" stroke="#d9d9d9" stroke-width="2"/>
+                                    <path d="M65 15 L70 10" stroke="#d9d9d9" stroke-width="2"/>
+                                </svg>
+                            </div>
+                            <div class="empty-text">暂无数据</div>
+                        </div>
+                    </div>
+
+                    <!-- 分页 -->
+                    <div class="pagination">
+                        <div class="pagination-info" id="paginationInfo">总条数：0</div>
+                        <div class="pagination-controls" id="paginationControls">
+                            <select class="page-size" id="pageSizeSelect">
+                                <option value="10" selected>10条/页</option>
+                                <option value="20">20条/页</option>
+                                <option value="50">50条/页</option>
+                            </select>
+                            <button class="page-btn" id="prevPageBtn" onclick="goToPage(currentPage - 1)">‹</button>
+                            <div id="pageNumbers"></div>
+                            <button class="page-btn" id="nextPageBtn" onclick="goToPage(currentPage + 1)">›</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 创建任务模态框 -->
+    <div class="modal" id="createTaskModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">创建同步任务</h3>
+                <span class="modal-close" id="closeModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">任务名称</label>
+                    <input type="text" class="form-input" id="taskName" placeholder="请输入任务名称">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">源数据库连接</label>
+                    <input type="text" class="form-input" id="sourceConnection" placeholder="例如：mysql://user:pass@host:port/db">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">目标数据库连接</label>
+                    <input type="text" class="form-input" id="targetConnection" placeholder="例如：mysql://user:pass@host:port/db">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" id="cancelBtn">取消</button>
+                <button class="btn-confirm" id="confirmBtn">创建</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 任务详情模态框 -->
+    <div class="modal" id="taskDetailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">任务详情</h3>
+                <span class="modal-close" id="closeDetailModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="taskDetailContent">
+                    <div style="text-align: center; padding: 40px;">
+                        <div style="font-size: 14px; color: #999;">加载中...</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" id="closeDetailBtn">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知消息 -->
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // API基础URL
+        const API_BASE_URL = 'http://localhost:8082/api';
+        
+        // 当前页码
+        let currentPage = 1;
+        let pageSize = 10;
+        let totalCount = 0; // 总条数
+        
+        // 状态映射
+        const statusMap = {
+            'PENDING': { text: '等待中', class: 'status-pending' },
+            'RUNNING': { text: '运行中', class: 'status-running' },
+            'COMPLETED': { text: '已完成', class: 'status-completed' },
+            'FAILED': { text: '失败', class: 'status-failed' },
+            'PAUSED': { text: '已暂停', class: 'status-paused' }
+        };
+        
+        // 检查登录状态
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'login.html';
+                return false;
+            }
+            return true;
+        }
+        
+        // 获取当前用户信息
+        function getCurrentUser() {
+            const userStr = localStorage.getItem('user');
+            return userStr ? JSON.parse(userStr) : null;
+        }
+        
+        // 显示用户信息
+        function displayUserInfo() {
+            const user = getCurrentUser();
+            if (user) {
+                document.getElementById('usernameDisplay').textContent = user.username;
+            }
+        }
+        
+        // 退出登录
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = 'login.html';
+        }
+        
+        // 获取请求头（包含认证信息）
+        function getAuthHeaders() {
+            const token = localStorage.getItem('token');
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : ''
+            };
+        }
+        
+        // 格式化时间（根据用户所在时区显示）
+        function formatDateTime(dateString) {
+            if (!dateString) return '-';
+            
+            const date = new Date(dateString);
+            
+            // 检查日期是否有效
+            if (isNaN(date.getTime())) {
+                return '-';
+            }
+            
+            // 获取用户所在时区
+            const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            
+            // 格式化选项 - 使用本地时区
+            const options = {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            };
+            
+            // 格式化日期（使用本地时区）
+            const formatted = new Intl.DateTimeFormat('zh-CN', options).format(date);
+            
+            // 获取时区偏移（基于当前日期，因为夏令时可能会影响偏移量）
+            const offset = -date.getTimezoneOffset() / 60;
+            const offsetStr = offset >= 0 ? `UTC+${offset}` : `UTC${offset}`;
+            
+            return `${formatted} (${offsetStr})`;
+        }
+        
+        // 获取任务列表
+        async function fetchWorkflows() {
+            if (!checkAuth()) return;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/workflows?page=${currentPage}&pageSize=${pageSize}`, {
+                    headers: getAuthHeaders()
+                });
+                
+                if (response.status === 401) {
+                    // Token 过期或无效，跳转到登录页
+                    logout();
+                    return;
+                }
+                
+                const result = await response.json();
+                console.log('API 返回结果:', result);
+                
+                if (result.success) {
+                    totalCount = result.data.total;
+                    console.log('任务列表:', result.data.list);
+                    console.log('总数:', result.data.total);
+                    renderTable(result.data.list);
+                    updatePagination(result.data.total);
+                }
+            } catch (error) {
+                console.error('获取任务列表失败:', error);
+                showNotification('获取任务列表失败', 'error');
+            }
+        }
+        
+        // 渲染表格
+        function renderTable(workflows) {
+            console.log('renderTable 被调用，workflows:', workflows);
+            const tableBody = document.getElementById('tableBody');
+            const emptyState = document.getElementById('emptyState');
+            
+            console.log('tableBody:', tableBody);
+            console.log('emptyState:', emptyState);
+            
+            if (!workflows || workflows.length === 0) {
+                console.log('没有数据，显示空状态');
+                emptyState.style.display = 'flex';
+                const existingRows = tableBody.querySelectorAll('.table-row');
+                existingRows.forEach(row => row.remove());
+                return;
+            }
+            
+            console.log('有数据，开始渲染');
+            emptyState.style.display = 'none';
+            
+            // 清除已有的表格行
+            const existingRows = tableBody.querySelectorAll('.table-row');
+            existingRows.forEach(row => row.remove());
+            
+            // 添加新行
+            workflows.forEach(workflow => {
+                const row = createTableRow(workflow);
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // 创建表格行
+        function createTableRow(workflow) {
+            const row = document.createElement('div');
+            row.className = 'table-row';
+            row.dataset.id = workflow.id;
+            
+            const statusInfo = statusMap[workflow.status] || statusMap['pending'];
+            
+            row.innerHTML = `
+                <div class="table-cell col-checkbox">
+                    <div class="checkbox"></div>
+                </div>
+                <div class="table-cell col-name">
+                    <div>
+                        <div>${workflow.name}</div>
+                        <div style="font-size: 11px; color: #1890ff; cursor: pointer;" onclick="showTaskDetail('${workflow.id}')">${workflow.id}</div>
+                    </div>
+                </div>
+                <div class="table-cell col-status">
+                    <span class="status-tag ${statusInfo.class}">
+                        <span style="width: 6px; height: 6px; border-radius: 50%; background-color: currentColor;"></span>
+                        ${statusInfo.text}
+                    </span>
+                </div>
+                <div class="table-cell col-monitor">
+                    <span style="color: #999;">-</span>
+                </div>
+                <div class="table-cell col-billing">
+                    ${workflow.is_billing ? '<span style="color: #52c41a;">是</span>' : '<span style="color: #999;">否</span>'}
+                </div>
+                <div class="table-cell col-more">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${workflow.progress || 0}%"></div>
+                    </div>
+                    <span style="margin-left: 8px; font-size: 11px; color: #666;">${workflow.progress || 0}%</span>
+                </div>
+                <div class="table-cell col-action">
+                    <div class="action-btns">
+                        ${workflow.status === 'RUNNING' ? 
+                            `<button class="action-btn" onclick="pauseWorkflow('${workflow.id}')">暂停</button>` : 
+                            workflow.status === 'PAUSED' ?
+                            `<button class="action-btn" onclick="resumeWorkflow('${workflow.id}')">恢复</button>` :
+                            ''}
+                        <button class="action-btn delete" onclick="deleteWorkflow('${workflow.id}')">删除</button>
+                    </div>
+                </div>
+            `;
+            
+            return row;
+        }
+        
+        // 更新分页信息
+        function updatePagination(total) {
+            const totalPages = Math.ceil(total / pageSize);
+            
+            document.getElementById('paginationInfo').textContent = 
+                `总条数：${total} | 第 ${currentPage}/${totalPages} 页`;
+            
+            // 更新上一页/下一页按钮状态
+            document.getElementById('prevPageBtn').disabled = currentPage <= 1;
+            document.getElementById('nextPageBtn').disabled = currentPage >= totalPages || totalPages === 0;
+            
+            // 生成页码按钮
+            renderPageNumbers(totalPages);
+        }
+        
+        // 渲染页码按钮
+        function renderPageNumbers(totalPages) {
+            const pageNumbersContainer = document.getElementById('pageNumbers');
+            
+            if (totalPages <= 0) {
+                pageNumbersContainer.innerHTML = '';
+                return;
+            }
+            
+            let html = '';
+            
+            // 显示最多5个页码
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, startPage + 4);
+            
+            if (endPage - startPage < 4) {
+                startPage = Math.max(1, endPage - 4);
+            }
+            
+            // 第一页
+            if (startPage > 1) {
+                html += `<button class="page-btn" onclick="goToPage(1)">1</button>`;
+                if (startPage > 2) {
+                    html += `<span style="padding: 0 8px; color: #999;">...</span>`;
+                }
+            }
+            
+            // 中间页码
+            for (let i = startPage; i <= endPage; i++) {
+                if (i === currentPage) {
+                    html += `<button class="page-btn active">${i}</button>`;
+                } else {
+                    html += `<button class="page-btn" onclick="goToPage(${i})">${i}</button>`;
+                }
+            }
+            
+            // 最后一页
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    html += `<span style="padding: 0 8px; color: #999;">...</span>`;
+                }
+                html += `<button class="page-btn" onclick="goToPage(${totalPages})">${totalPages}</button>`;
+            }
+            
+            pageNumbersContainer.innerHTML = html;
+        }
+        
+        // 跳转到指定页
+        function goToPage(page) {
+            const totalPages = Math.ceil(totalCount / pageSize);
+            
+            if (page < 1 || page > totalPages) {
+                return;
+            }
+            
+            currentPage = page;
+            fetchWorkflows();
+        }
+        
+        // 更改每页显示条数
+        function changePageSize(newPageSize) {
+            pageSize = parseInt(newPageSize, 10);
+            currentPage = 1; // 重置到第一页
+            fetchWorkflows();
+        }
+        
+        let isSubmitting = false;
+        
+        // 创建任务
+        async function createTask() {
+            if (!checkAuth()) return;
+            
+            if (isSubmitting) {
+                showNotification('正在提交中，请稍候...', 'error');
+                return;
+            }
+            
+            const name = document.getElementById('taskName').value.trim();
+            const sourceConnection = document.getElementById('sourceConnection').value.trim();
+            const targetConnection = document.getElementById('targetConnection').value.trim();
+            
+            if (!name) {
+                showNotification('请输入任务名称', 'error');
+                return;
+            }
+            
+            isSubmitting = true;
+            const confirmBtn = document.getElementById('confirmBtn');
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = '创建中...';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/workflows`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        name,
+                        sourceConnection: sourceConnection || 'default-source',
+                        targetConnection: targetConnection || 'default-target'
+                    })
+                });
+                
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('任务创建成功', 'success');
+                    closeModal();
+                    clearForm();
+                    fetchWorkflows();
+                } else {
+                    showNotification(result.message || '创建失败', 'error');
+                }
+            } catch (error) {
+                console.error('创建任务失败:', error);
+                showNotification('创建任务失败', 'error');
+            } finally {
+                isSubmitting = false;
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = '创建';
+            }
+        }
+        
+        // 暂停工作流
+        async function pauseWorkflow(id) {
+            if (!checkAuth()) return;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/workflows/${id}/pause`, {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+                
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('任务已暂停', 'success');
+                    fetchWorkflows();
+                } else {
+                    showNotification(result.message || '暂停失败', 'error');
+                }
+            } catch (error) {
+                console.error('暂停任务失败:', error);
+                showNotification('暂停任务失败', 'error');
+            }
+        }
+        
+        // 恢复工作流
+        async function resumeWorkflow(id) {
+            if (!checkAuth()) return;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/workflows/${id}/resume`, {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+                
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('任务已恢复', 'success');
+                    fetchWorkflows();
+                } else {
+                    showNotification(result.message || '恢复失败', 'error');
+                }
+            } catch (error) {
+                console.error('恢复任务失败:', error);
+                showNotification('恢复任务失败', 'error');
+            }
+        }
+        
+        // 显示任务详情
+        async function showTaskDetail(id) {
+            if (!checkAuth()) return;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/workflows/${id}`, {
+                    headers: getAuthHeaders()
+                });
+                
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const task = result.data;
+                    const statusInfo = statusMap[task.status] || statusMap['pending'];
+                    
+                    let logsHtml = '';
+                    if (task.logs && task.logs.length > 0) {
+                        logsHtml = `
+                            <div style="margin-top: 20px;">
+                                <h4 style="margin-bottom: 12px; font-size: 14px; font-weight: 500;">执行日志</h4>
+                                <div style="border: 1px solid #e8e8e8; border-radius: 4px; max-height: 200px; overflow-y: auto;">
+                                    ${task.logs.map(log => `
+                                        <div style="padding: 8px 12px; border-bottom: 1px solid #f0f0f0;">
+                                            <div style="font-size: 12px; color: #999; margin-bottom: 4px;">${formatDateTime(log.created_at)}</div>
+                                            <div style="font-size: 13px; color: ${log.level === 'error' ? '#f5222d' : log.level === 'warning' ? '#fa8c16' : '#333'};">
+                                                ${log.message}
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    document.getElementById('taskDetailContent').innerHTML = `
+                        <div style="display: grid; grid-template-columns: 120px 1fr; gap: 12px 24px;">
+                            <div style="font-size: 13px; color: #666;">任务名称:</div>
+                            <div style="font-size: 13px;">${task.name}</div>
+                            
+                            <div style="font-size: 13px; color: #666;">任务ID:</div>
+                            <div style="font-size: 13px; font-family: monospace;">${task.id}</div>
+                            
+                            <div style="font-size: 13px; color: #666;">当前状态:</div>
+                            <div>
+                                <span class="status-tag ${statusInfo.class}">
+                                    <span style="width: 6px; height: 6px; border-radius: 50%; background-color: currentColor;"></span>
+                                    ${statusInfo.text}
+                                </span>
+                            </div>
+                            
+                            <div style="font-size: 13px; color: #666;">执行进度:</div>
+                            <div>
+                                <div class="progress-bar" style="width: 200px;">
+                                    <div class="progress-fill" style="width: ${task.progress || 0}%"></div>
+                                </div>
+                                <span style="margin-left: 8px; font-size: 11px; color: #666;">${task.progress || 0}%</span>
+                            </div>
+                            
+                            <div style="font-size: 13px; color: #666;">是否计费中:</div>
+                            <div>${task.is_billing ? '<span style="color: #52c41a;">是</span>' : '<span style="color: #999;">否</span>'}</div>
+                            
+                            <div style="font-size: 13px; color: #666;">源连接:</div>
+                            <div style="font-size: 13px; word-break: break-all;">${task.source_connection}</div>
+                            
+                            <div style="font-size: 13px; color: #666;">目标连接:</div>
+                            <div style="font-size: 13px; word-break: break-all;">${task.target_connection}</div>
+                            
+                            <div style="font-size: 13px; color: #666;">创建时间:</div>
+                            <div style="font-size: 13px;">${formatDateTime(task.created_at)}</div>
+                            
+                            ${task.updated_at ? `
+                                <div style="font-size: 13px; color: #666;">更新时间:</div>
+                                <div style="font-size: 13px;">${formatDateTime(task.updated_at)}</div>
+                            ` : ''}
+                            
+                            ${task.completed_at ? `
+                                <div style="font-size: 13px; color: #666;">完成时间:</div>
+                                <div style="font-size: 13px;">${formatDateTime(task.completed_at)}</div>
+                            ` : ''}
+                        </div>
+                        ${logsHtml}
+                    `;
+                    
+                    document.getElementById('taskDetailModal').classList.add('show');
+                } else {
+                    showNotification(result.message || '获取任务详情失败', 'error');
+                }
+            } catch (error) {
+                console.error('获取任务详情失败:', error);
+                showNotification('获取任务详情失败', 'error');
+            }
+        }
+        
+        // 关闭详情模态框
+        function closeDetailModal() {
+            document.getElementById('taskDetailModal').classList.remove('show');
+        }
+        
+        // 删除工作流
+        async function deleteWorkflow(id) {
+            if (!checkAuth()) return;
+            
+            if (!confirm('确定要删除这个任务吗？')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/workflows/${id}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('任务删除成功', 'success');
+                    fetchWorkflows();
+                } else {
+                    showNotification(result.message || '删除失败', 'error');
+                }
+            } catch (error) {
+                console.error('删除任务失败:', error);
+                showNotification('删除任务失败', 'error');
+            }
+        }
+        
+        // 显示通知
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type} show`;
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // 打开模态框
+        function openModal() {
+            document.getElementById('createTaskModal').classList.add('show');
+        }
+        
+        // 关闭模态框
+        function closeModal() {
+            document.getElementById('createTaskModal').classList.remove('show');
+        }
+        
+        // 清空表单
+        function clearForm() {
+            document.getElementById('taskName').value = '';
+            document.getElementById('sourceConnection').value = '';
+            document.getElementById('targetConnection').value = '';
+        }
+        
+        // 事件监听
+        document.getElementById('createTaskBtn').addEventListener('click', openModal);
+        document.getElementById('closeModal').addEventListener('click', closeModal);
+        document.getElementById('cancelBtn').addEventListener('click', closeModal);
+        document.getElementById('confirmBtn').addEventListener('click', createTask);
+        document.getElementById('refreshBtn').addEventListener('click', fetchWorkflows);
+        
+        // 分页控件事件
+        document.getElementById('pageSizeSelect').addEventListener('change', (e) => {
+            changePageSize(e.target.value);
+        });
+        
+        // 详情模态框事件
+        document.getElementById('closeDetailModal').addEventListener('click', closeDetailModal);
+        document.getElementById('closeDetailBtn').addEventListener('click', closeDetailModal);
+        
+        // 点击模态框外部关闭
+        document.getElementById('createTaskModal').addEventListener('click', (e) => {
+            if (e.target.id === 'createTaskModal') {
+                closeModal();
+            }
+        });
+        
+        document.getElementById('taskDetailModal').addEventListener('click', (e) => {
+            if (e.target.id === 'taskDetailModal') {
+                closeDetailModal();
+            }
+        });
+        
+        // 页面加载时获取任务列表
+        document.addEventListener('DOMContentLoaded', () => {
+            // 检查登录状态并显示用户信息
+            if (checkAuth()) {
+                displayUserInfo();
+                fetchWorkflows();
+            }
+            
+            // 定时刷新任务状态
+            setInterval(fetchWorkflows, 5000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,224 @@
+package com.synctask.controller;
+
+import com.synctask.entity.Workflow;
+import com.synctask.entity.WorkflowLog;
+import com.synctask.security.UserPrincipal;
+import com.synctask.service.WorkflowService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/workflows")
+public class WorkflowController {
+    @Autowired
+    private WorkflowService workflowService;
+
+    @PostMapping
+    public ResponseEntity<?> createWorkflow(
+            @RequestBody CreateWorkflowRequest request,
+            Authentication authentication) {
+        try {
+            UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+            Workflow workflow = workflowService.createWorkflow(
+                    request.getName(),
+                    request.getSourceConnection(),
+                    request.getTargetConnection(),
+                    userPrincipal.getId()
+            );
+            return ResponseEntity.ok(new ApiResponse(true, "任务创建成功", convertToMap(workflow)));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ApiResponse(false, e.getMessage()));
+        }
+    }
+
+    @GetMapping
+    public ResponseEntity<?> getWorkflows(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize,
+            Authentication authentication) {
+        try {
+            UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+            Page<Workflow> workflowPage = workflowService.getWorkflowsByUserId(
+                    userPrincipal.getId(), page, pageSize
+            );
+
+            List<Map<String, Object>> list = new ArrayList<>();
+            for (Workflow workflow : workflowPage.getContent()) {
+                list.add(convertToMap(workflow));
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("list", list);
+            response.put("total", workflowPage.getTotalElements());
+            response.put("page", page);
+            response.put("pageSize", pageSize);
+
+            return ResponseEntity.ok(new ApiResponse(true, "获取成功", response));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ApiResponse(false, e.getMessage()));
+        }
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getWorkflow(
+            @PathVariable String id,
+            Authentication authentication) {
+        try {
+            UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+            Workflow workflow = workflowService.getWorkflowById(id, userPrincipal.getId());
+            List<WorkflowLog> logs = workflowService.getWorkflowLogs(id, userPrincipal.getId());
+
+            Map<String, Object> response = convertToMap(workflow);
+            
+            List<Map<String, Object>> logList = new ArrayList<>();
+            for (WorkflowLog log : logs) {
+                Map<String, Object> logMap = new HashMap<>();
+                logMap.put("id", log.getId());
+                logMap.put("workflow_id", log.getWorkflowId());
+                logMap.put("level", log.getLevel().name());
+                logMap.put("message", log.getMessage());
+                logMap.put("created_at", log.getCreatedAt());
+                logList.add(logMap);
+            }
+            response.put("logs", logList);
+
+            return ResponseEntity.ok(new ApiResponse(true, "获取成功", response));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ApiResponse(false, e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{id}/pause")
+    public ResponseEntity<?> pauseWorkflow(
+            @PathVariable String id,
+            Authentication authentication) {
+        try {
+            UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+            workflowService.pauseWorkflow(id, userPrincipal.getId());
+            return ResponseEntity.ok(new ApiResponse(true, "任务已暂停"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ApiResponse(false, e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{id}/resume")
+    public ResponseEntity<?> resumeWorkflow(
+            @PathVariable String id,
+            Authentication authentication) {
+        try {
+            UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+            workflowService.resumeWorkflow(id, userPrincipal.getId());
+            return ResponseEntity.ok(new ApiResponse(true, "任务已恢复"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ApiResponse(false, e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteWorkflow(
+            @PathVariable String id,
+            Authentication authentication) {
+        try {
+            UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+            workflowService.deleteWorkflow(id, userPrincipal.getId());
+            return ResponseEntity.ok(new ApiResponse(true, "任务删除成功"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ApiResponse(false, e.getMessage()));
+        }
+    }
+
+    private Map<String, Object> convertToMap(Workflow workflow) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", workflow.getId());
+        map.put("name", workflow.getName());
+        map.put("source_connection", workflow.getSourceConnection());
+        map.put("target_connection", workflow.getTargetConnection());
+        map.put("status", workflow.getStatus().name());
+        map.put("progress", workflow.getProgress());
+        map.put("is_billing", workflow.getIsBilling());
+        map.put("created_at", workflow.getCreatedAt());
+        map.put("updated_at", workflow.getUpdatedAt());
+        map.put("completed_at", workflow.getCompletedAt());
+        map.put("error_message", workflow.getErrorMessage());
+        map.put("user_id", workflow.getUserId());
+        return map;
+    }
+
+    public static class CreateWorkflowRequest {
+        private String name;
+        private String sourceConnection;
+        private String targetConnection;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getSourceConnection() {
+            return sourceConnection;
+        }
+
+        public void setSourceConnection(String sourceConnection) {
+            this.sourceConnection = sourceConnection;
+        }
+
+        public String getTargetConnection() {
+            return targetConnection;
+        }
+
+        public void setTargetConnection(String targetConnection) {
+            this.targetConnection = targetConnection;
+        }
+    }
+
+    public static class ApiResponse {
+        private boolean success;
+        private String message;
+        private Object data;
+
+        public ApiResponse(boolean success, String message) {
+            this.success = success;
+            this.message = message;
+        }
+
+        public ApiResponse(boolean success, String message, Object data) {
+            this.success = success;
+            this.message = message;
+            this.data = data;
+        }
+
+        public boolean isSuccess() {
+            return success;
+        }
+
+        public void setSuccess(boolean success) {
+            this.success = success;
+        }
+
+        public String getMessage() {
+            return message;
+        }
+
+        public void setMessage(String message) {
+            this.message = message;
+        }
+
+        public Object getData() {
+            return data;
+        }
+
+        public void setData(Object data) {
+            this.data = data;
+        }
+    }
+}
