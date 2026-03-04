@@ -1,6 +1,5 @@
 package com.synctask.service;
 
-import com.synctask.dto.TaskStatusMessage;
 import com.synctask.dto.TaskStatusUpdate;
 import com.synctask.entity.Workflow;
 import com.synctask.entity.WorkflowLog;
@@ -16,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @Service
 public class KafkaConsumerService {
@@ -33,32 +33,39 @@ public class KafkaConsumerService {
 
     @KafkaListener(topics = "${spring.kafka.topics.task-status}", groupId = "${spring.kafka.consumer.group-id}")
     @Transactional
-    public void consumeTaskStatusMessage(TaskStatusMessage message) {
-        logger.info("收到任务状态消息: taskId={}, status={}, progress={}", 
-            message.getTaskId(), message.getStatus(), message.getProgress());
+    public void consumeTaskStatusMessage(Map<String, Object> messageMap) {
+        logger.info("收到任务状态消息: {}", messageMap);
 
         try {
-            Workflow workflow = workflowRepository.findById(message.getTaskId()).orElse(null);
+            String taskId = getStringValue(messageMap, "taskId");
+            String status = getStringValue(messageMap, "status");
+            Integer progress = getIntegerValue(messageMap, "progress");
+            String errorMessage = getStringValue(messageMap, "errorMessage");
+            Boolean isBilling = getBooleanValue(messageMap, "isBilling");
+
+            logger.info("解析消息: taskId={}, status={}, progress={}", taskId, status, progress);
+
+            Workflow workflow = workflowRepository.findById(taskId).orElse(null);
             if (workflow == null) {
-                logger.warn("任务不存在: taskId={}", message.getTaskId());
+                logger.warn("任务不存在: taskId={}", taskId);
                 return;
             }
 
-            WorkflowStatus newStatus = WorkflowStatus.valueOf(message.getStatus().toUpperCase());
+            WorkflowStatus newStatus = WorkflowStatus.valueOf(status.toUpperCase());
             WorkflowStatus oldStatus = workflow.getStatus();
             
             workflow.setStatus(newStatus);
 
-            if (message.getProgress() != null) {
-                workflow.setProgress(message.getProgress());
+            if (progress != null) {
+                workflow.setProgress(progress);
             }
 
-            if (message.getErrorMessage() != null) {
-                workflow.setErrorMessage(message.getErrorMessage());
+            if (errorMessage != null) {
+                workflow.setErrorMessage(errorMessage);
             }
 
-            if (message.getIsBilling() != null) {
-                workflow.setIsBilling(message.getIsBilling());
+            if (isBilling != null) {
+                workflow.setIsBilling(isBilling);
             }
 
             if (newStatus == WorkflowStatus.COMPLETED || newStatus == WorkflowStatus.FAILED) {
@@ -68,7 +75,7 @@ public class KafkaConsumerService {
             workflowRepository.save(workflow);
             logger.info("任务状态已更新: taskId={}, status={}", workflow.getId(), workflow.getStatus());
 
-            String logMessage = buildStatusLogMessage(newStatus, oldStatus, message);
+            String logMessage = buildStatusLogMessage(newStatus, oldStatus, progress, errorMessage);
             WorkflowLog.LogLevel logLevel = determineLogLevel(newStatus);
             
             addLog(workflow.getId(), logLevel, logMessage);
@@ -88,23 +95,42 @@ public class KafkaConsumerService {
             logger.info("任务状态更新已推送到 WebSocket: taskId={}, userId={}", workflow.getId(), workflow.getUserId());
 
         } catch (Exception e) {
-            logger.error("处理任务状态消息失败: taskId={}", message.getTaskId(), e);
+            logger.error("处理任务状态消息失败: {}", messageMap, e);
         }
     }
 
-    private String buildStatusLogMessage(WorkflowStatus newStatus, WorkflowStatus oldStatus, TaskStatusMessage message) {
+    private String getStringValue(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        return value != null ? String.valueOf(value) : null;
+    }
+
+    private Integer getIntegerValue(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        if (value == null) return null;
+        if (value instanceof Integer) return (Integer) value;
+        if (value instanceof Number) return ((Number) value).intValue();
+        return Integer.valueOf(String.valueOf(value));
+    }
+
+    private Boolean getBooleanValue(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        if (value == null) return null;
+        if (value instanceof Boolean) return (Boolean) value;
+        return Boolean.valueOf(String.valueOf(value));
+    }
+
+    private String buildStatusLogMessage(WorkflowStatus newStatus, WorkflowStatus oldStatus, Integer progress, String errorMessage) {
         switch (newStatus) {
             case RUNNING:
-                if (message.getProgress() != null && message.getProgress() > 0) {
-                    return String.format("任务执行中，进度: %d%%", message.getProgress());
+                if (progress != null && progress > 0) {
+                    return String.format("任务执行中，进度: %d%%", progress);
                 }
                 return "任务开始执行";
             case COMPLETED:
                 return "任务执行完成";
             case FAILED:
-                String errorMsg = message.getErrorMessage();
-                return errorMsg != null && !errorMsg.isEmpty() 
-                    ? String.format("任务执行失败: %s", errorMsg)
+                return errorMessage != null && !errorMessage.isEmpty() 
+                    ? String.format("任务执行失败: %s", errorMessage)
                     : "任务执行失败";
             case PAUSED:
                 return "任务已暂停";

@@ -1,0 +1,6 @@
+com/migration/increment/MainIncrement.class
+com/migration/increment/executor/IncrementExecutor.class
+com/migration/increment/parser/SqlFileParser.class
+com/migration/increment/parser/SqlFileParser$SqlEntry.class
+com/migration/increment/checkpoint/PositionComparator.class
+com/migration/increment/checkpoint/CheckpointManager.class

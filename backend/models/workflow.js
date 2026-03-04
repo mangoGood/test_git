@@ -5,29 +5,49 @@ class Workflow {
     // 创建新的工作流
     static async create(data) {
         const id = uuidv4();
-        const { name, sourceConnection, targetConnection } = data;
+        const { name, sourceConnection, targetConnection, migrationMode } = data;
         
         const [result] = await pool.execute(
-            `INSERT INTO workflows (id, name, source_connection, target_connection, status, is_billing) 
-             VALUES (?, ?, ?, ?, 'pending', 1)`,
-            [id, name, sourceConnection, targetConnection]
+            `INSERT INTO workflows (id, name, source_connection, target_connection, status, is_billing, migration_mode) 
+             VALUES (?, ?, ?, ?, 'pending', 1, ?)`,
+            [id, name, sourceConnection, targetConnection, migrationMode || 'full']
         );
         
-        return { id, name, status: 'pending' };
+        return { id, name, status: 'pending', migrationMode: migrationMode || 'full' };
     }
     
     // 获取所有工作流
-    static async findAll(page = 1, pageSize = 10) {
+    static async findAll(page = 1, pageSize = 10, userId = null) {
         const offset = (page - 1) * pageSize;
         
-        const [workflows] = await pool.execute(
-            `SELECT * FROM workflows ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-            [pageSize, offset]
-        );
+        console.log(`findAll called with page=${page}, pageSize=${pageSize}, offset=${offset}, userId=${userId}`);
         
-        const [countResult] = await pool.execute(
-            `SELECT COUNT(*) as total FROM workflows`
-        );
+        let sql = `SELECT * FROM workflows WHERE is_deleted = 0`;
+        const params = [];
+        
+        if (userId) {
+            sql += ` AND user_id = ?`;
+            params.push(userId);
+        }
+        
+        sql += ` ORDER BY created_at DESC LIMIT ${pageSize} OFFSET ${offset}`;
+        console.log(`Executing SQL: ${sql}`);
+        console.log(`Params: ${JSON.stringify(params)}`);
+        
+        const [workflows] = await pool.execute(sql, params);
+        
+        let countSql = `SELECT COUNT(*) as total FROM workflows WHERE is_deleted = 0`;
+        const countParams = [];
+        
+        if (userId) {
+            countSql += ` AND user_id = ?`;
+            countParams.push(userId);
+        }
+        
+        const [countResult] = await pool.execute(countSql, countParams);
+        
+        console.log(`Found ${workflows.length} workflows, total: ${countResult[0].total}`);
+        console.log(`First workflow created_at: ${workflows[0]?.created_at}, Last workflow created_at: ${workflows[workflows.length-1]?.created_at}`);
         
         return {
             list: workflows,

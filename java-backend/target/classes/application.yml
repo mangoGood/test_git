@@ -29,6 +29,7 @@ spring:
       retries: 3
     consumer:
       group-id: sync-task-group
+      task-created-group-id: task-created-group
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       auto-offset-reset: earliest
@@ -46,6 +47,10 @@ spring:
 jwt:
   secret: synctask-secret-key-very-long-string-for-jwt-token-generation-and-validation-2024
   expiration: 86400000
+
+app:
+  task:
+    file-base-path: ./files
 
 logging:
   level:
