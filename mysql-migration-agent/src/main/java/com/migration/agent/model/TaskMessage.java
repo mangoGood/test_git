@@ -4,6 +4,7 @@ public class TaskMessage {
     private String taskId;
     private DatabaseConfig source;
     private DatabaseConfig target;
+    private String migrationMode;
 
     public static class DatabaseConfig {
         private String host;
@@ -75,5 +76,13 @@ public class TaskMessage {
 
     public void setTarget(DatabaseConfig target) {
         this.target = target;
+    }
+
+    public String getMigrationMode() {
+        return migrationMode;
+    }
+
+    public void setMigrationMode(String migrationMode) {
+        this.migrationMode = migrationMode;
     }
 }

@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
+const kafkaService = require('./services/kafkaService');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -38,10 +39,16 @@ app.use((err, req, res, next) => {
 });
 
 // 启动服务器
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
     console.log(`服务器已启动，监听端口: ${PORT}`);
     console.log(`API地址: http://localhost:${PORT}/api`);
     console.log(`前端页面: http://localhost:${PORT}/admin-dashboard.html`);
+    
+    try {
+        await kafkaService.connect();
+    } catch (error) {
+        console.error('Failed to connect to Kafka:', error);
+    }
 });
 
 module.exports = app;

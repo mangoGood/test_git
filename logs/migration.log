@@ -957,3 +957,264 @@ java.io.FileNotFoundException: --help (No such file or directory)
 2026-03-04 12:22:06.872 [main] INFO  c.m.binlog.parser.BinlogParserMain - ========================================
 2026-03-04 12:22:06.875 [main] INFO  c.m.binlog.parser.BinlogParserMain - 开始监听 binlog 目录: ./binlog_output
 2026-03-04 12:25:11.437 [Thread-0] INFO  c.m.binlog.parser.BinlogParserMain - 接收到关闭信号，停止解析...
+2026-03-04 19:36:02.146 [main] INFO  com.migration.full.Main - ========================================
+2026-03-04 19:36:02.146 [main] INFO  com.migration.full.Main - MySQL 数据库全量迁移工具启动
+2026-03-04 19:36:02.146 [main] INFO  com.migration.full.Main - ========================================
+2026-03-04 19:36:02.146 [main] INFO  com.migration.full.Main - 使用配置文件: config.properties
+2026-03-04 19:36:02.147 [main] INFO  com.migration.full.Main - 源数据库: myapp_db
+2026-03-04 19:36:02.147 [main] INFO  com.migration.full.Main - 目标数据库: myapp_db
+2026-03-04 19:36:02.317 [main] DEBUG c.m.full.progress.ProgressDatabase - 进度表创建成功
+2026-03-04 19:36:02.318 [main] INFO  c.m.full.progress.ProgressDatabase - 进度数据库初始化成功
+2026-03-04 19:36:02.318 [main] INFO  c.m.full.progress.ProgressManager - 进度管理器已启用
+2026-03-04 19:36:02.386 [main] INFO  com.migration.db.DatabaseConnection - 成功连接到数据库: myapp_db
+2026-03-04 19:36:02.390 [main] INFO  com.migration.db.DatabaseConnection - 成功连接到数据库: myapp_db
+2026-03-04 19:36:02.393 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - Checkpoint 数据库初始化成功: ./checkpoint/checkpoint
+2026-03-04 19:36:02.393 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - ========================================
+2026-03-04 19:36:02.393 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - 开始记录源数据库快照位点
+2026-03-04 19:36:02.393 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - ========================================
+2026-03-04 19:36:02.400 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - 当前 binlog 位置: binlog.000012:10928
+2026-03-04 19:36:02.401 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - 当前 GTID: a890051c-eb78-11f0-a60f-dafc9531d26a:1-34
+2026-03-04 19:36:02.405 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - 保存 Checkpoint 成功: BinlogPositionInfo{filename='binlog.000012', position=10928, gtid='a890051c-eb78-11f0-a60f-dafc9531d26a:1-34', timestamp=1772624162403}
+2026-03-04 19:36:02.405 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - ========================================
+2026-03-04 19:36:02.405 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - 源数据库快照位点记录完成
+2026-03-04 19:36:02.405 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - ========================================
+2026-03-04 19:36:02.475 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - Checkpoint 数据库连接已关闭
+2026-03-04 19:36:02.479 [main] INFO  com.migration.db.DatabaseConnection - 成功连接到数据库: myapp_db
+2026-03-04 19:36:02.489 [main] INFO  c.m.full.metadata.MetadataReader - 找到 2 个表
+2026-03-04 19:36:02.502 [main] DEBUG c.m.full.metadata.MetadataReader - 表 chinese_person_info 的列信息: 11
+2026-03-04 19:36:02.504 [main] DEBUG c.m.full.metadata.MetadataReader - 表 test1 的列信息: 2
+2026-03-04 19:36:02.505 [main] INFO  com.migration.full.Main - 找到 2 个表需要迁移
+2026-03-04 19:36:02.506 [main] INFO  com.migration.full.Main -   - chinese_person_info: 5000 行
+2026-03-04 19:36:02.508 [main] INFO  com.migration.full.Main -   - test1: 7 行
+2026-03-04 19:36:02.508 [main] INFO  com.migration.full.Main - 
+========================================
+2026-03-04 19:36:02.508 [main] INFO  com.migration.full.Main - 开始迁移表结构
+2026-03-04 19:36:02.508 [main] INFO  com.migration.full.Main - ========================================
+2026-03-04 19:36:02.508 [main] INFO  c.m.full.migration.SchemaMigration - 开始迁移表结构，共 2 个表
+2026-03-04 19:36:02.547 [main] DEBUG c.m.full.migration.SchemaMigration - 已创建表: chinese_person_info
+2026-03-04 19:36:02.547 [main] INFO  c.m.full.migration.SchemaMigration - 表 chinese_person_info 结构迁移成功
+2026-03-04 19:36:02.556 [main] DEBUG c.m.full.migration.SchemaMigration - 已创建表: test1
+2026-03-04 19:36:02.556 [main] INFO  c.m.full.migration.SchemaMigration - 表 test1 结构迁移成功
+2026-03-04 19:36:02.556 [main] INFO  c.m.full.migration.SchemaMigration - 表结构迁移完成，成功: 2, 失败: 0
+2026-03-04 19:36:02.556 [main] INFO  com.migration.full.Main - 表结构迁移完成
+2026-03-04 19:36:02.556 [main] INFO  com.migration.full.Main - 
+========================================
+2026-03-04 19:36:02.556 [main] INFO  com.migration.full.Main - 开始迁移数据
+2026-03-04 19:36:02.556 [main] INFO  com.migration.full.Main - ========================================
+2026-03-04 19:36:02.557 [main] INFO  c.m.full.migration.DataMigration - 开始迁移数据，共 2 个表
+2026-03-04 19:36:02.558 [main] INFO  c.m.full.migration.DataMigration - 开始迁移表 chinese_person_info 的数据，总行数: 5000
+2026-03-04 19:36:02.560 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='chinese_person_info', status='PENDING', progress=0.00% (0/5000)}
+2026-03-04 19:36:02.560 [main] INFO  c.m.full.progress.ProgressManager - 重新开始迁移: chinese_person_info, 总行数: 5000
+2026-03-04 19:36:03.790 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='chinese_person_info', status='PENDING', progress=19.98% (999/5000)}
+2026-03-04 19:36:05.002 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='chinese_person_info', status='PENDING', progress=39.98% (1999/5000)}
+2026-03-04 19:36:06.129 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='chinese_person_info', status='PENDING', progress=59.98% (2999/5000)}
+2026-03-04 19:36:07.306 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='chinese_person_info', status='PENDING', progress=79.98% (3999/5000)}
+2026-03-04 19:36:08.444 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='chinese_person_info', status='PENDING', progress=99.98% (4999/5000)}
+2026-03-04 19:36:08.444 [main] INFO  c.m.full.migration.DataMigration - 表 chinese_person_info 数据迁移完成，成功: 5000, 失败: 0
+2026-03-04 19:36:08.445 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='chinese_person_info', status='COMPLETED', progress=99.98% (4999/5000)}
+2026-03-04 19:36:08.445 [main] INFO  c.m.full.progress.ProgressManager - 迁移完成: chinese_person_info
+2026-03-04 19:36:08.445 [main] INFO  c.m.full.migration.DataMigration - 表 chinese_person_info 数据迁移完成，成功: 5000, 失败: 0
+2026-03-04 19:36:08.449 [main] INFO  com.migration.db.DatabaseConnection - 成功连接到数据库: myapp_db
+2026-03-04 19:36:08.450 [main] INFO  c.m.full.migration.DataMigration - 开始迁移表 test1 的数据，总行数: 7
+2026-03-04 19:36:08.451 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='test1', status='PENDING', progress=0.00% (0/7)}
+2026-03-04 19:36:08.451 [main] INFO  c.m.full.progress.ProgressManager - 重新开始迁移: test1, 总行数: 7
+2026-03-04 19:36:08.453 [main] INFO  com.migration.db.DatabaseConnection - 成功连接到数据库: myapp_db
+2026-03-04 19:36:08.466 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='test1', status='PENDING', progress=100.00% (7/7)}
+2026-03-04 19:36:08.466 [main] INFO  c.m.full.progress.ProgressManager - 迁移进度: test1 - 7/7 ({:.2f}%)
+2026-03-04 19:36:08.466 [main] INFO  c.m.full.migration.DataMigration - 表 test1 数据迁移完成，成功: 7, 失败: 0
+2026-03-04 19:36:08.467 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='test1', status='COMPLETED', progress=100.00% (7/7)}
+2026-03-04 19:36:08.467 [main] INFO  c.m.full.progress.ProgressManager - 迁移完成: test1
+2026-03-04 19:36:08.467 [main] INFO  c.m.full.migration.DataMigration - 表 test1 数据迁移完成，成功: 7, 失败: 0
+2026-03-04 19:36:08.467 [main] INFO  c.m.full.migration.DataMigration - 数据迁移完成，总成功: 5007, 总失败: 0
+2026-03-04 19:36:08.467 [main] INFO  com.migration.full.Main - 数据迁移完成
+2026-03-04 19:36:08.467 [main] INFO  com.migration.full.Main - 
+========================================
+2026-03-04 19:36:08.467 [main] INFO  com.migration.full.Main - 迁移进度摘要
+2026-03-04 19:36:08.467 [main] INFO  com.migration.full.Main - ========================================
+2026-03-04 19:36:08.468 [main] INFO  c.m.full.progress.ProgressManager - ========== 迁移进度摘要 ==========
+2026-03-04 19:36:08.468 [main] INFO  c.m.full.progress.ProgressManager - 总表数: 2
+2026-03-04 19:36:08.468 [main] INFO  c.m.full.progress.ProgressManager - 表: chinese_person_info, 状态: COMPLETED, 进度: 4999/5000 ({:.2f}%)
+2026-03-04 19:36:08.468 [main] INFO  c.m.full.progress.ProgressManager - 表: test1, 状态: COMPLETED, 进度: 7/7 ({:.2f}%)
+2026-03-04 19:36:08.468 [main] INFO  c.m.full.progress.ProgressManager - ----------------------------------
+2026-03-04 19:36:08.468 [main] INFO  c.m.full.progress.ProgressManager - 已完成: 2, 进行中: 0, 失败: 0, 待处理: 0
+2026-03-04 19:36:08.468 [main] INFO  c.m.full.progress.ProgressManager - ==================================
+2026-03-04 19:36:08.468 [main] INFO  com.migration.full.Main - 
+========================================
+2026-03-04 19:36:08.468 [main] INFO  com.migration.full.Main - 数据库全量迁移成功完成！
+2026-03-04 19:36:08.468 [main] INFO  com.migration.full.Main - ========================================
+2026-03-04 19:36:08.545 [main] INFO  c.m.full.progress.ProgressDatabase - 进度数据库连接已关闭
+2026-03-04 19:36:08.545 [main] INFO  c.m.full.progress.ProgressManager - 进度管理器已关闭
+2026-03-04 21:05:58.519 [main] INFO  com.migration.full.Main - ========================================
+2026-03-04 21:05:58.520 [main] INFO  com.migration.full.Main - MySQL 数据库全量迁移工具启动
+2026-03-04 21:05:58.520 [main] INFO  com.migration.full.Main - ========================================
+2026-03-04 21:05:58.520 [main] INFO  com.migration.full.Main - 使用配置文件: config.properties
+2026-03-04 21:05:58.521 [main] INFO  com.migration.full.Main - 源数据库: myapp_db
+2026-03-04 21:05:58.521 [main] INFO  com.migration.full.Main - 目标数据库: myapp_db
+2026-03-04 21:05:58.670 [main] DEBUG c.m.full.progress.ProgressDatabase - 进度表创建成功
+2026-03-04 21:05:58.671 [main] INFO  c.m.full.progress.ProgressDatabase - 进度数据库初始化成功
+2026-03-04 21:05:58.671 [main] INFO  c.m.full.progress.ProgressManager - 进度管理器已启用
+2026-03-04 21:05:58.728 [main] INFO  com.migration.db.DatabaseConnection - 成功连接到数据库: myapp_db
+2026-03-04 21:05:58.733 [main] INFO  com.migration.db.DatabaseConnection - 成功连接到数据库: myapp_db
+2026-03-04 21:05:58.736 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - Checkpoint 数据库初始化成功: ./checkpoint/checkpoint
+2026-03-04 21:05:58.736 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - ========================================
+2026-03-04 21:05:58.736 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - 开始记录源数据库快照位点
+2026-03-04 21:05:58.736 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - ========================================
+2026-03-04 21:05:58.744 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - 当前 binlog 位置: binlog.000012:10928
+2026-03-04 21:05:58.744 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - 当前 GTID: a890051c-eb78-11f0-a60f-dafc9531d26a:1-34
+2026-03-04 21:05:58.748 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - 保存 Checkpoint 成功: BinlogPositionInfo{filename='binlog.000012', position=10928, gtid='a890051c-eb78-11f0-a60f-dafc9531d26a:1-34', timestamp=1772629558747}
+2026-03-04 21:05:58.748 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - ========================================
+2026-03-04 21:05:58.748 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - 源数据库快照位点记录完成
+2026-03-04 21:05:58.748 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - ========================================
+2026-03-04 21:05:58.803 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - Checkpoint 数据库连接已关闭
+2026-03-04 21:05:58.807 [main] INFO  com.migration.db.DatabaseConnection - 成功连接到数据库: myapp_db
+2026-03-04 21:05:58.817 [main] INFO  c.m.full.metadata.MetadataReader - 找到 2 个表
+2026-03-04 21:05:58.827 [main] DEBUG c.m.full.metadata.MetadataReader - 表 chinese_person_info 的列信息: 11
+2026-03-04 21:05:58.830 [main] DEBUG c.m.full.metadata.MetadataReader - 表 test1 的列信息: 2
+2026-03-04 21:05:58.831 [main] INFO  com.migration.full.Main - 找到 2 个表需要迁移
+2026-03-04 21:05:58.832 [main] INFO  com.migration.full.Main -   - chinese_person_info: 5000 行
+2026-03-04 21:05:58.833 [main] INFO  com.migration.full.Main -   - test1: 7 行
+2026-03-04 21:05:58.833 [main] INFO  com.migration.full.Main - 
+========================================
+2026-03-04 21:05:58.833 [main] INFO  com.migration.full.Main - 开始迁移表结构
+2026-03-04 21:05:58.833 [main] INFO  com.migration.full.Main - ========================================
+2026-03-04 21:05:58.834 [main] INFO  c.m.full.migration.SchemaMigration - 开始迁移表结构，共 2 个表
+2026-03-04 21:05:58.875 [main] DEBUG c.m.full.migration.SchemaMigration - 已创建表: chinese_person_info
+2026-03-04 21:05:58.875 [main] INFO  c.m.full.migration.SchemaMigration - 表 chinese_person_info 结构迁移成功
+2026-03-04 21:05:58.886 [main] DEBUG c.m.full.migration.SchemaMigration - 已创建表: test1
+2026-03-04 21:05:58.886 [main] INFO  c.m.full.migration.SchemaMigration - 表 test1 结构迁移成功
+2026-03-04 21:05:58.886 [main] INFO  c.m.full.migration.SchemaMigration - 表结构迁移完成，成功: 2, 失败: 0
+2026-03-04 21:05:58.886 [main] INFO  com.migration.full.Main - 表结构迁移完成
+2026-03-04 21:05:58.886 [main] INFO  com.migration.full.Main - 
+========================================
+2026-03-04 21:05:58.886 [main] INFO  com.migration.full.Main - 开始迁移数据
+2026-03-04 21:05:58.887 [main] INFO  com.migration.full.Main - ========================================
+2026-03-04 21:05:58.887 [main] INFO  c.m.full.migration.DataMigration - 开始迁移数据，共 2 个表
+2026-03-04 21:05:58.888 [main] INFO  c.m.full.migration.DataMigration - 开始迁移表 chinese_person_info 的数据，总行数: 5000
+2026-03-04 21:05:58.891 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='chinese_person_info', status='PENDING', progress=0.00% (0/5000)}
+2026-03-04 21:05:58.891 [main] INFO  c.m.full.progress.ProgressManager - 重新开始迁移: chinese_person_info, 总行数: 5000
+2026-03-04 21:06:00.149 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='chinese_person_info', status='PENDING', progress=19.98% (999/5000)}
+2026-03-04 21:06:01.379 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='chinese_person_info', status='PENDING', progress=39.98% (1999/5000)}
+2026-03-04 21:06:02.587 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='chinese_person_info', status='PENDING', progress=59.98% (2999/5000)}
+2026-03-04 21:06:03.809 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='chinese_person_info', status='PENDING', progress=79.98% (3999/5000)}
+2026-03-04 21:06:05.043 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='chinese_person_info', status='PENDING', progress=99.98% (4999/5000)}
+2026-03-04 21:06:05.043 [main] INFO  c.m.full.migration.DataMigration - 表 chinese_person_info 数据迁移完成，成功: 5000, 失败: 0
+2026-03-04 21:06:05.044 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='chinese_person_info', status='COMPLETED', progress=99.98% (4999/5000)}
+2026-03-04 21:06:05.045 [main] INFO  c.m.full.progress.ProgressManager - 迁移完成: chinese_person_info
+2026-03-04 21:06:05.045 [main] INFO  c.m.full.migration.DataMigration - 表 chinese_person_info 数据迁移完成，成功: 5000, 失败: 0
+2026-03-04 21:06:05.049 [main] INFO  com.migration.db.DatabaseConnection - 成功连接到数据库: myapp_db
+2026-03-04 21:06:05.056 [main] INFO  c.m.full.migration.DataMigration - 开始迁移表 test1 的数据，总行数: 7
+2026-03-04 21:06:05.058 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='test1', status='PENDING', progress=0.00% (0/7)}
+2026-03-04 21:06:05.058 [main] INFO  c.m.full.progress.ProgressManager - 重新开始迁移: test1, 总行数: 7
+2026-03-04 21:06:05.062 [main] INFO  com.migration.db.DatabaseConnection - 成功连接到数据库: myapp_db
+2026-03-04 21:06:05.083 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='test1', status='PENDING', progress=100.00% (7/7)}
+2026-03-04 21:06:05.083 [main] INFO  c.m.full.progress.ProgressManager - 迁移进度: test1 - 7/7 ({:.2f}%)
+2026-03-04 21:06:05.083 [main] INFO  c.m.full.migration.DataMigration - 表 test1 数据迁移完成，成功: 7, 失败: 0
+2026-03-04 21:06:05.084 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='test1', status='COMPLETED', progress=100.00% (7/7)}
+2026-03-04 21:06:05.084 [main] INFO  c.m.full.progress.ProgressManager - 迁移完成: test1
+2026-03-04 21:06:05.084 [main] INFO  c.m.full.migration.DataMigration - 表 test1 数据迁移完成，成功: 7, 失败: 0
+2026-03-04 21:06:05.084 [main] INFO  c.m.full.migration.DataMigration - 数据迁移完成，总成功: 5007, 总失败: 0
+2026-03-04 21:06:05.084 [main] INFO  com.migration.full.Main - 数据迁移完成
+2026-03-04 21:06:05.084 [main] INFO  com.migration.full.Main - 
+========================================
+2026-03-04 21:06:05.084 [main] INFO  com.migration.full.Main - 迁移进度摘要
+2026-03-04 21:06:05.084 [main] INFO  com.migration.full.Main - ========================================
+2026-03-04 21:06:05.085 [main] INFO  c.m.full.progress.ProgressManager - ========== 迁移进度摘要 ==========
+2026-03-04 21:06:05.085 [main] INFO  c.m.full.progress.ProgressManager - 总表数: 2
+2026-03-04 21:06:05.085 [main] INFO  c.m.full.progress.ProgressManager - 表: chinese_person_info, 状态: COMPLETED, 进度: 4999/5000 ({:.2f}%)
+2026-03-04 21:06:05.085 [main] INFO  c.m.full.progress.ProgressManager - 表: test1, 状态: COMPLETED, 进度: 7/7 ({:.2f}%)
+2026-03-04 21:06:05.085 [main] INFO  c.m.full.progress.ProgressManager - ----------------------------------
+2026-03-04 21:06:05.085 [main] INFO  c.m.full.progress.ProgressManager - 已完成: 2, 进行中: 0, 失败: 0, 待处理: 0
+2026-03-04 21:06:05.085 [main] INFO  c.m.full.progress.ProgressManager - ==================================
+2026-03-04 21:06:05.085 [main] INFO  com.migration.full.Main - 
+========================================
+2026-03-04 21:06:05.085 [main] INFO  com.migration.full.Main - 数据库全量迁移成功完成！
+2026-03-04 21:06:05.085 [main] INFO  com.migration.full.Main - ========================================
+2026-03-04 21:06:05.143 [main] INFO  c.m.full.progress.ProgressDatabase - 进度数据库连接已关闭
+2026-03-04 21:06:05.143 [main] INFO  c.m.full.progress.ProgressManager - 进度管理器已关闭
+2026-03-04 21:21:19.930 [main] INFO  com.migration.full.Main - ========================================
+2026-03-04 21:21:19.930 [main] INFO  com.migration.full.Main - MySQL 数据库全量迁移工具启动
+2026-03-04 21:21:19.930 [main] INFO  com.migration.full.Main - ========================================
+2026-03-04 21:21:19.931 [main] INFO  com.migration.full.Main - 使用配置文件: config.properties
+2026-03-04 21:21:19.932 [main] INFO  com.migration.full.Main - 源数据库: myapp_db
+2026-03-04 21:21:19.932 [main] INFO  com.migration.full.Main - 目标数据库: myapp_db
+2026-03-04 21:21:20.078 [main] DEBUG c.m.full.progress.ProgressDatabase - 进度表创建成功
+2026-03-04 21:21:20.078 [main] INFO  c.m.full.progress.ProgressDatabase - 进度数据库初始化成功
+2026-03-04 21:21:20.078 [main] INFO  c.m.full.progress.ProgressManager - 进度管理器已启用
+2026-03-04 21:21:20.137 [main] INFO  com.migration.db.DatabaseConnection - 成功连接到数据库: myapp_db
+2026-03-04 21:21:20.143 [main] INFO  com.migration.db.DatabaseConnection - 成功连接到数据库: myapp_db
+2026-03-04 21:21:20.147 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - Checkpoint 数据库初始化成功: ./checkpoint/checkpoint
+2026-03-04 21:21:20.147 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - ========================================
+2026-03-04 21:21:20.147 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - 开始记录源数据库快照位点
+2026-03-04 21:21:20.147 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - ========================================
+2026-03-04 21:21:20.154 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - 当前 binlog 位置: binlog.000012:10928
+2026-03-04 21:21:20.155 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - 当前 GTID: a890051c-eb78-11f0-a60f-dafc9531d26a:1-34
+2026-03-04 21:21:20.159 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - 保存 Checkpoint 成功: BinlogPositionInfo{filename='binlog.000012', position=10928, gtid='a890051c-eb78-11f0-a60f-dafc9531d26a:1-34', timestamp=1772630480157}
+2026-03-04 21:21:20.159 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - ========================================
+2026-03-04 21:21:20.159 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - 源数据库快照位点记录完成
+2026-03-04 21:21:20.159 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - ========================================
+2026-03-04 21:21:20.209 [main] INFO  c.m.f.checkpoint.CheckpointRecorder - Checkpoint 数据库连接已关闭
+2026-03-04 21:21:20.213 [main] INFO  com.migration.db.DatabaseConnection - 成功连接到数据库: myapp_db
+2026-03-04 21:21:20.223 [main] INFO  c.m.full.metadata.MetadataReader - 找到 2 个表
+2026-03-04 21:21:20.233 [main] DEBUG c.m.full.metadata.MetadataReader - 表 chinese_person_info 的列信息: 11
+2026-03-04 21:21:20.236 [main] DEBUG c.m.full.metadata.MetadataReader - 表 test1 的列信息: 2
+2026-03-04 21:21:20.236 [main] INFO  com.migration.full.Main - 找到 2 个表需要迁移
+2026-03-04 21:21:20.238 [main] INFO  com.migration.full.Main -   - chinese_person_info: 5000 行
+2026-03-04 21:21:20.239 [main] INFO  com.migration.full.Main -   - test1: 7 行
+2026-03-04 21:21:20.240 [main] INFO  com.migration.full.Main - 
+========================================
+2026-03-04 21:21:20.240 [main] INFO  com.migration.full.Main - 开始迁移表结构
+2026-03-04 21:21:20.240 [main] INFO  com.migration.full.Main - ========================================
+2026-03-04 21:21:20.240 [main] INFO  c.m.full.migration.SchemaMigration - 开始迁移表结构，共 2 个表
+2026-03-04 21:21:20.275 [main] DEBUG c.m.full.migration.SchemaMigration - 已创建表: chinese_person_info
+2026-03-04 21:21:20.275 [main] INFO  c.m.full.migration.SchemaMigration - 表 chinese_person_info 结构迁移成功
+2026-03-04 21:21:20.290 [main] DEBUG c.m.full.migration.SchemaMigration - 已创建表: test1
+2026-03-04 21:21:20.291 [main] INFO  c.m.full.migration.SchemaMigration - 表 test1 结构迁移成功
+2026-03-04 21:21:20.291 [main] INFO  c.m.full.migration.SchemaMigration - 表结构迁移完成，成功: 2, 失败: 0
+2026-03-04 21:21:20.291 [main] INFO  com.migration.full.Main - 表结构迁移完成
+2026-03-04 21:21:20.291 [main] INFO  com.migration.full.Main - 
+========================================
+2026-03-04 21:21:20.291 [main] INFO  com.migration.full.Main - 开始迁移数据
+2026-03-04 21:21:20.291 [main] INFO  com.migration.full.Main - ========================================
+2026-03-04 21:21:20.291 [main] INFO  c.m.full.migration.DataMigration - 开始迁移数据，共 2 个表
+2026-03-04 21:21:20.293 [main] INFO  c.m.full.migration.DataMigration - 开始迁移表 chinese_person_info 的数据，总行数: 5000
+2026-03-04 21:21:20.295 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='chinese_person_info', status='PENDING', progress=0.00% (0/5000)}
+2026-03-04 21:21:20.296 [main] INFO  c.m.full.progress.ProgressManager - 重新开始迁移: chinese_person_info, 总行数: 5000
+2026-03-04 21:21:21.554 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='chinese_person_info', status='PENDING', progress=19.98% (999/5000)}
+2026-03-04 21:21:22.727 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='chinese_person_info', status='PENDING', progress=39.98% (1999/5000)}
+2026-03-04 21:21:23.912 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='chinese_person_info', status='PENDING', progress=59.98% (2999/5000)}
+2026-03-04 21:21:25.154 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='chinese_person_info', status='PENDING', progress=79.98% (3999/5000)}
+2026-03-04 21:21:26.468 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='chinese_person_info', status='PENDING', progress=99.98% (4999/5000)}
+2026-03-04 21:21:26.469 [main] INFO  c.m.full.migration.DataMigration - 表 chinese_person_info 数据迁移完成，成功: 5000, 失败: 0
+2026-03-04 21:21:26.470 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='chinese_person_info', status='COMPLETED', progress=99.98% (4999/5000)}
+2026-03-04 21:21:26.470 [main] INFO  c.m.full.progress.ProgressManager - 迁移完成: chinese_person_info
+2026-03-04 21:21:26.471 [main] INFO  c.m.full.migration.DataMigration - 表 chinese_person_info 数据迁移完成，成功: 5000, 失败: 0
+2026-03-04 21:21:26.477 [main] INFO  com.migration.db.DatabaseConnection - 成功连接到数据库: myapp_db
+2026-03-04 21:21:26.481 [main] INFO  c.m.full.migration.DataMigration - 开始迁移表 test1 的数据，总行数: 7
+2026-03-04 21:21:26.484 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='test1', status='PENDING', progress=0.00% (0/7)}
+2026-03-04 21:21:26.484 [main] INFO  c.m.full.progress.ProgressManager - 重新开始迁移: test1, 总行数: 7
+2026-03-04 21:21:26.488 [main] INFO  com.migration.db.DatabaseConnection - 成功连接到数据库: myapp_db
+2026-03-04 21:21:26.499 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='test1', status='PENDING', progress=100.00% (7/7)}
+2026-03-04 21:21:26.499 [main] INFO  c.m.full.progress.ProgressManager - 迁移进度: test1 - 7/7 ({:.2f}%)
+2026-03-04 21:21:26.499 [main] INFO  c.m.full.migration.DataMigration - 表 test1 数据迁移完成，成功: 7, 失败: 0
+2026-03-04 21:21:26.499 [main] DEBUG c.m.full.progress.ProgressDatabase - 保存进度: MigrationProgress{table='test1', status='COMPLETED', progress=100.00% (7/7)}
+2026-03-04 21:21:26.499 [main] INFO  c.m.full.progress.ProgressManager - 迁移完成: test1
+2026-03-04 21:21:26.499 [main] INFO  c.m.full.migration.DataMigration - 表 test1 数据迁移完成，成功: 7, 失败: 0
+2026-03-04 21:21:26.499 [main] INFO  c.m.full.migration.DataMigration - 数据迁移完成，总成功: 5007, 总失败: 0
+2026-03-04 21:21:26.499 [main] INFO  com.migration.full.Main - 数据迁移完成
+2026-03-04 21:21:26.499 [main] INFO  com.migration.full.Main - 
+========================================
+2026-03-04 21:21:26.499 [main] INFO  com.migration.full.Main - 迁移进度摘要
+2026-03-04 21:21:26.499 [main] INFO  com.migration.full.Main - ========================================
+2026-03-04 21:21:26.500 [main] INFO  c.m.full.progress.ProgressManager - ========== 迁移进度摘要 ==========
+2026-03-04 21:21:26.500 [main] INFO  c.m.full.progress.ProgressManager - 总表数: 2
+2026-03-04 21:21:26.500 [main] INFO  c.m.full.progress.ProgressManager - 表: chinese_person_info, 状态: COMPLETED, 进度: 4999/5000 ({:.2f}%)
+2026-03-04 21:21:26.500 [main] INFO  c.m.full.progress.ProgressManager - 表: test1, 状态: COMPLETED, 进度: 7/7 ({:.2f}%)
+2026-03-04 21:21:26.501 [main] INFO  c.m.full.progress.ProgressManager - ----------------------------------
+2026-03-04 21:21:26.501 [main] INFO  c.m.full.progress.ProgressManager - 已完成: 2, 进行中: 0, 失败: 0, 待处理: 0
+2026-03-04 21:21:26.501 [main] INFO  c.m.full.progress.ProgressManager - ==================================
+2026-03-04 21:21:26.501 [main] INFO  com.migration.full.Main - 
+========================================
+2026-03-04 21:21:26.501 [main] INFO  com.migration.full.Main - 数据库全量迁移成功完成！
+2026-03-04 21:21:26.501 [main] INFO  com.migration.full.Main - ========================================
+2026-03-04 21:21:26.561 [main] INFO  c.m.full.progress.ProgressDatabase - 进度数据库连接已关闭
+2026-03-04 21:21:26.561 [main] INFO  c.m.full.progress.ProgressManager - 进度管理器已关闭

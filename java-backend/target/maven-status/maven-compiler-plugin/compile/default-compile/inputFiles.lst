@@ -5,6 +5,7 @@
 /Users/finn/Documents/git_projects/test_git/java-backend/src/main/java/com/synctask/security/CustomUserDetailsService.java
 /Users/finn/Documents/git_projects/test_git/java-backend/src/main/java/com/synctask/SyncTaskApplication.java
 /Users/finn/Documents/git_projects/test_git/java-backend/src/main/java/com/synctask/config/SecurityConfig.java
+/Users/finn/Documents/git_projects/test_git/java-backend/src/main/java/com/synctask/config/WebMvcConfig.java
 /Users/finn/Documents/git_projects/test_git/java-backend/src/main/java/com/synctask/service/KafkaConsumerService.java
 /Users/finn/Documents/git_projects/test_git/java-backend/src/main/java/com/synctask/dto/TaskStatusUpdate.java
 /Users/finn/Documents/git_projects/test_git/java-backend/src/main/java/com/synctask/service/WorkflowService.java

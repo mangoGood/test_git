@@ -93,7 +93,8 @@ public class AgentMain {
     
     private void handleTaskMessage(TaskMessage taskMessage) {
         String taskId = taskMessage.getTaskId();
-        logger.info("Received task message: {}", taskId);
+        String migrationMode = taskMessage.getMigrationMode();
+        logger.info("Received task message: {} with migration mode: {}", taskId, migrationMode);
         
         try {
             if (currentTaskId != null && !currentTaskId.equals(taskId)) {
@@ -108,10 +109,14 @@ public class AgentMain {
             configService.updateConfig(taskMessage);
             logger.info("Config updated for task: {}", taskId);
             
-            if (!binlogStarted) {
-                binlogManager.start();
-                binlogStarted = true;
-                sendStatus(taskId, "BINLOG_STARTED", "Binlog monitoring started", 0);
+            if ("fullAndIncre".equals(migrationMode)) {
+                if (!binlogStarted) {
+                    binlogManager.start();
+                    binlogStarted = true;
+                    sendStatus(taskId, "BINLOG_STARTED", "Binlog monitoring started", 0);
+                }
+            } else {
+                logger.info("Full migration mode, skipping binlog process");
             }
             
             if (migrationTaskManager != null && migrationTaskManager.isRunning()) {

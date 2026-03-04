@@ -63,6 +63,8 @@ public class SecurityConfig {
             auth.requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/health").permitAll()
                 .requestMatchers("/error").permitAll()
+                .requestMatchers("/", "/login.html", "/admin-dashboard.html").permitAll()
+                .requestMatchers("/*.css", "/*.js", "/*.png", "/*.jpg", "/*.ico").permitAll()
                 .anyRequest().authenticated()
         );
 

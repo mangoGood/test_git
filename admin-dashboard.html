@@ -484,6 +484,7 @@
         .col-checkbox { width: 40px; }
         .col-name { flex: 2; }
         .col-status { flex: 1; }
+        .col-created { flex: 1; }
         .col-monitor { flex: 1; }
         .col-billing { flex: 1; }
         .col-more { flex: 2; }
@@ -731,6 +732,10 @@
                             状态
                             <span class="sort-icon">⇅</span>
                         </div>
+                        <div class="table-header-cell col-created">
+                            创建时间
+                            <span class="sort-icon">⇅</span>
+                        </div>
                         <div class="table-header-cell col-monitor">监控信息</div>
                         <div class="table-header-cell col-billing">
                             是否计费中
@@ -797,6 +802,19 @@
                 <div class="form-group">
                     <label class="form-label">目标数据库连接</label>
                     <input type="text" class="form-input" id="targetConnection" placeholder="例如：mysql://user:pass@host:port/db">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">同步模式</label>
+                    <div style="display: flex; gap: 16px; margin-top: 8px;">
+                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                            <input type="radio" name="migrationMode" value="full" id="modeFull" checked>
+                            <span>全量同步任务</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                            <input type="radio" name="migrationMode" value="fullAndIncre" id="modeFullAndIncre">
+                            <span>增量同步任务</span>
+                        </label>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -927,7 +945,11 @@
             if (!checkAuth()) return;
             
             try {
-                const response = await fetch(`${API_BASE_URL}/workflows?page=${currentPage}&pageSize=${pageSize}`, {
+                const user = getCurrentUser();
+                const userId = user ? user.id : null;
+                const url = `${API_BASE_URL}/workflows?page=${currentPage}&pageSize=${pageSize}${userId ? `&userId=${userId}` : ''}`;
+                
+                const response = await fetch(url, {
                     headers: getAuthHeaders()
                 });
                 
@@ -944,15 +966,7 @@
                     totalCount = result.data.total;
                     console.log('任务列表:', result.data.list);
                     console.log('总数:', result.data.total);
-                    
-                    // 按创建时间排序（最新的在前）
-                    const sortedWorkflows = result.data.list.sort((a, b) => {
-                        const dateA = new Date(a.created_at || 0);
-                        const dateB = new Date(b.created_at || 0);
-                        return dateB - dateA;
-                    });
-                    
-                    renderTable(sortedWorkflows);
+                    renderTable(result.data.list);
                     updatePagination(result.data.total);
                 }
             } catch (error) {
@@ -1015,6 +1029,9 @@
                         <span style="width: 6px; height: 6px; border-radius: 50%; background-color: currentColor;"></span>
                         ${statusInfo.text}
                     </span>
+                </div>
+                <div class="table-cell col-created">
+                    <div style="font-size: 12px; color: #666;">${formatDateTime(workflow.created_at)}</div>
                 </div>
                 <div class="table-cell col-monitor">
                     <span style="color: #999;">-</span>
@@ -1139,6 +1156,10 @@
             const sourceConnection = document.getElementById('sourceConnection').value.trim();
             const targetConnection = document.getElementById('targetConnection').value.trim();
             
+            // 获取选中的同步模式
+            const modeFull = document.getElementById('modeFull');
+            const migrationMode = modeFull.checked ? 'full' : 'fullAndIncre';
+            
             if (!name) {
                 showNotification('请输入任务名称', 'error');
                 return;
@@ -1156,7 +1177,8 @@
                     body: JSON.stringify({
                         name,
                         sourceConnection: sourceConnection || 'default-source',
-                        targetConnection: targetConnection || 'default-target'
+                        targetConnection: targetConnection || 'default-target',
+                        migrationMode
                     })
                 });
                 

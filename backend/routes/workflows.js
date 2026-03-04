@@ -2,11 +2,12 @@ const express = require('express');
 const router = express.Router();
 const Workflow = require('../models/workflow');
 const workflowExecutor = require('../services/workflowService');
+const kafkaService = require('../services/kafkaService');
 
 // 创建新的同步任务
 router.post('/', async (req, res) => {
     try {
-        const { name, sourceConnection, targetConnection } = req.body;
+        const { name, sourceConnection, targetConnection, migrationMode } = req.body;
         
         if (!name) {
             return res.status(400).json({
@@ -19,8 +20,21 @@ router.post('/', async (req, res) => {
         const workflow = await Workflow.create({
             name,
             sourceConnection: sourceConnection || 'default-source',
-            targetConnection: targetConnection || 'default-target'
+            targetConnection: targetConnection || 'default-target',
+            migrationMode: migrationMode || 'full'
         });
+        
+        // 发送消息到 Kafka
+        try {
+            await kafkaService.sendTaskCreatedMessage(
+                workflow.id,
+                sourceConnection || 'default-source',
+                targetConnection || 'default-target',
+                migrationMode || 'full'
+            );
+        } catch (kafkaError) {
+            console.error('Failed to send Kafka message:', kafkaError);
+        }
         
         // 启动工作流执行
         workflowExecutor.startWorkflow(workflow.id);
@@ -46,7 +60,10 @@ router.get('/', async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const pageSize = parseInt(req.query.pageSize) || 10;
         
-        const result = await Workflow.findAll(page, pageSize);
+        // 从请求中获取用户ID（这里简化处理，实际应该从token中解析）
+        const userId = req.query.userId ? parseInt(req.query.userId) : null;
+        
+        const result = await Workflow.findAll(page, pageSize, userId);
         
         res.json({
             success: true,

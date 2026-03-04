@@ -36,6 +36,7 @@ public class ProcessManager {
         
         ProcessBuilder pb = new ProcessBuilder("java", "-jar", jarPath);
         pb.redirectErrorStream(true);
+        pb.directory(new File(System.getProperty("user.dir")));
         
         logger.info("Starting {} process: {}", processName, jarPath);
         process = pb.start();
