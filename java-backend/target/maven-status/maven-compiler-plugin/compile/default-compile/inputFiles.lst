@@ -1,3 +1,4 @@
+/Users/finn/Documents/git_projects/test_git/java-backend/src/main/java/com/synctask/executor/dto/TaskCreatedEvent.java
 /Users/finn/Documents/git_projects/test_git/java-backend/src/main/java/com/synctask/config/AsyncConfig.java
 /Users/finn/Documents/git_projects/test_git/java-backend/src/main/java/com/synctask/entity/LogLevelConverter.java
 /Users/finn/Documents/git_projects/test_git/java-backend/src/main/java/com/synctask/dto/TaskStatusMessage.java
@@ -18,6 +19,7 @@
 /Users/finn/Documents/git_projects/test_git/java-backend/src/main/java/com/synctask/repository/WorkflowLogRepository.java
 /Users/finn/Documents/git_projects/test_git/java-backend/src/main/java/com/synctask/entity/WorkflowLog.java
 /Users/finn/Documents/git_projects/test_git/java-backend/src/main/java/com/synctask/entity/User.java
+/Users/finn/Documents/git_projects/test_git/java-backend/src/main/java/com/synctask/executor/service/TaskExecutorService.java
 /Users/finn/Documents/git_projects/test_git/java-backend/src/main/java/com/synctask/dto/TaskCreatedMessage.java
 /Users/finn/Documents/git_projects/test_git/java-backend/src/main/java/com/synctask/repository/WorkflowRepository.java
 /Users/finn/Documents/git_projects/test_git/java-backend/src/main/java/com/synctask/controller/WorkflowController.java

@@ -2,7 +2,13 @@
     "java.compile.nullAnalysis.mode": "automatic",
     "java.configuration.updateBuildConfiguration": "automatic",
     "java.project.sourcePaths": [
-        "java-backend/src/main/java"
+        "java-backend/src/main/java",
+        "mysql-migration-common/src/main/java",
+        "mysql-migration-full/src/main/java",
+        "mysql-migration-binlog/src/main/java",
+        "mysql-migration-binlog-fetch/src/main/java",
+        "mysql-migration-binlog-parser/src/main/java",
+        "mysql-migration-increment/src/main/java"
     ],
     "java.project.outputPath": "java-backend/target/classes",
     "maven.terminal.useJavaHome": true,
