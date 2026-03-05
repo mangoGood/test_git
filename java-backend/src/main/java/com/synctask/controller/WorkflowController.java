@@ -30,6 +30,7 @@ public class WorkflowController {
                     request.getName(),
                     request.getSourceConnection(),
                     request.getTargetConnection(),
+                    request.getMigrationMode(),
                     userPrincipal.getId()
             );
             return ResponseEntity.ok(new ApiResponse(true, "任务创建成功", convertToMap(workflow)));
@@ -42,11 +43,13 @@ public class WorkflowController {
     public ResponseEntity<?> getWorkflows(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(defaultValue = "created_at") String sortBy,
+            @RequestParam(defaultValue = "DESC") String sortDirection,
             Authentication authentication) {
         try {
             UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
             Page<Workflow> workflowPage = workflowService.getWorkflowsByUserId(
-                    userPrincipal.getId(), page, pageSize
+                    userPrincipal.getId(), page, pageSize, sortBy, sortDirection
             );
 
             List<Map<String, Object>> list = new ArrayList<>();
@@ -143,6 +146,8 @@ public class WorkflowController {
         map.put("status", workflow.getStatus().name());
         map.put("progress", workflow.getProgress());
         map.put("is_billing", workflow.getIsBilling());
+        map.put("migration_mode", workflow.getMigrationMode());
+        map.put("is_deleted", workflow.getIsDeleted());
         map.put("created_at", workflow.getCreatedAt());
         map.put("updated_at", workflow.getUpdatedAt());
         map.put("completed_at", workflow.getCompletedAt());
@@ -155,6 +160,7 @@ public class WorkflowController {
         private String name;
         private String sourceConnection;
         private String targetConnection;
+        private String migrationMode;
 
         public String getName() {
             return name;
@@ -178,6 +184,14 @@ public class WorkflowController {
 
         public void setTargetConnection(String targetConnection) {
             this.targetConnection = targetConnection;
+        }
+
+        public String getMigrationMode() {
+            return migrationMode;
+        }
+
+        public void setMigrationMode(String migrationMode) {
+            this.migrationMode = migrationMode;
         }
     }
 

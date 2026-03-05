@@ -191,20 +191,24 @@ public class DataMigration {
                         }
                         
                     } catch (SQLException e) {
-                        failCount++;
-                        logger.error("插入数据失败，表: {}, 行: {}", tableName, processedRows, e);
-                        
-                        // 更新进度（即使失败也记录）
-                        if (progressManager != null && progressManager.isEnabled()) {
-                            try {
-                                progressManager.updateProgress(tableName, processedRows, currentLastId);
-                            } catch (SQLException ex) {
-                                logger.error("更新进度失败", ex);
+                        if (isDuplicateKeyError(e)) {
+                            logger.warn("主键冲突，跳过该行，表: {}, 行: {}", tableName, processedRows);
+                        } else {
+                            failCount++;
+                            logger.error("插入数据失败，表: {}, 行: {}", tableName, processedRows, e);
+                            
+                            // 更新进度（即使失败也记录）
+                            if (progressManager != null && progressManager.isEnabled()) {
+                                try {
+                                    progressManager.updateProgress(tableName, processedRows, currentLastId);
+                                } catch (SQLException ex) {
+                                    logger.error("更新进度失败", ex);
+                                }
                             }
-                        }
-                        
-                        if (!continueOnError) {
-                            throw e;
+                            
+                            if (!continueOnError) {
+                                throw e;
+                            }
                         }
                     }
                 }
@@ -221,9 +225,13 @@ public class DataMigration {
                             progressManager.updateProgress(tableName, processedRows, currentLastId);
                         }
                     } catch (SQLException e) {
-                        logger.error("执行最后一批数据失败，表: {}", tableName, e);
-                        if (!continueOnError) {
-                            throw e;
+                        if (isDuplicateKeyError(e)) {
+                            logger.warn("批处理中存在主键冲突，表: {}", tableName);
+                        } else {
+                            logger.error("执行最后一批数据失败，表: {}", tableName, e);
+                            if (!continueOnError) {
+                                throw e;
+                            }
                         }
                     }
                 }
@@ -319,5 +327,26 @@ public class DataMigration {
             }
         }
         return count;
+    }
+    
+    /**
+     * 判断是否为主键冲突错误
+     */
+    private boolean isDuplicateKeyError(SQLException e) {
+        int errorCode = e.getErrorCode();
+        String sqlState = e.getSQLState();
+        
+        if (errorCode == 1062 || "23000".equals(sqlState)) {
+            return true;
+        }
+        
+        String message = e.getMessage();
+        if (message != null && (message.contains("Duplicate entry") || 
+            message.contains("duplicate key value") || 
+            message.contains("PRIMARY") || message.contains("UNIQUE"))) {
+            return true;
+        }
+        
+        return false;
     }
 }

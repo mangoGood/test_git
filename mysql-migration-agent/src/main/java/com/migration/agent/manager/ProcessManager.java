@@ -14,6 +14,8 @@ public class ProcessManager {
     
     private final String jarPath;
     private final String processName;
+    private String taskId;
+    private String[] mainArgs;
     private Process process;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private Thread monitorThread;
@@ -21,6 +23,20 @@ public class ProcessManager {
     public ProcessManager(String jarPath, String processName) {
         this.jarPath = jarPath;
         this.processName = processName;
+    }
+    
+    public ProcessManager(String jarPath, String processName, String taskId) {
+        this.jarPath = jarPath;
+        this.processName = processName;
+        this.taskId = taskId;
+    }
+    
+    public void setTaskId(String taskId) {
+        this.taskId = taskId;
+    }
+    
+    public void setMainArgs(String[] mainArgs) {
+        this.mainArgs = mainArgs;
     }
     
     public void start() throws Exception {
@@ -34,11 +50,28 @@ public class ProcessManager {
             throw new RuntimeException("Jar file not found: " + jarPath);
         }
         
-        ProcessBuilder pb = new ProcessBuilder("java", "-jar", jarPath);
+        java.util.List<String> command = new java.util.ArrayList<>();
+        command.add("java");
+        
+        if (taskId != null) {
+            command.add("-Dtask.id=" + taskId);
+            command.add("-Dlogback.configurationFile=files/" + taskId + "/logback.xml");
+        }
+        
+        command.add("-jar");
+        command.add(jarPath);
+        
+        if (mainArgs != null) {
+            for (String arg : mainArgs) {
+                command.add(arg);
+            }
+        }
+        
+        ProcessBuilder pb = new ProcessBuilder(command);
         pb.redirectErrorStream(true);
         pb.directory(new File(System.getProperty("user.dir")));
         
-        logger.info("Starting {} process: {}", processName, jarPath);
+        logger.info("Starting {} process: {} with task ID: {}", processName, jarPath, taskId);
         process = pb.start();
         running.set(true);
         
@@ -121,5 +154,19 @@ public class ProcessManager {
             logger.warn("{} is not running, restarting...", processName);
             start();
         }
+    }
+    
+    public int waitFor() throws InterruptedException {
+        if (process != null) {
+            return process.waitFor();
+        }
+        return -1;
+    }
+    
+    public boolean waitFor(long timeout, TimeUnit unit) throws InterruptedException {
+        if (process != null) {
+            return process.waitFor(timeout, unit);
+        }
+        return false;
     }
 }

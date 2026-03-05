@@ -1,10 +1,13 @@
 package com.migration.agent.service;
 
-import com.google.gson.Gson;
+import com.google.gson.*;
 import com.migration.agent.model.TaskMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Type;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -17,7 +20,7 @@ public class KafkaConsumerService {
     private final String bootstrapServers;
     private final String groupId;
     private final TaskHandler taskHandler;
-    private final Gson gson = new Gson();
+    private final Gson gson;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private ExecutorService executorService;
     
@@ -29,24 +32,42 @@ public class KafkaConsumerService {
         this.bootstrapServers = bootstrapServers;
         this.groupId = groupId;
         this.taskHandler = taskHandler;
+        
+        GsonBuilder builder = new GsonBuilder();
+        builder.registerTypeAdapter(LocalDateTime.class, new JsonDeserializer<LocalDateTime>() {
+            private final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+            
+            @Override
+            public LocalDateTime deserialize(JsonElement json, Type typeOfT, 
+                    JsonDeserializationContext context) throws JsonParseException {
+                if (json.isJsonArray()) {
+                    JsonArray arr = json.getAsJsonArray();
+                    int year = arr.get(0).getAsInt();
+                    int month = arr.get(1).getAsInt();
+                    int day = arr.get(2).getAsInt();
+                    int hour = arr.get(3).getAsInt();
+                    int minute = arr.get(4).getAsInt();
+                    int second = arr.get(5).getAsInt();
+                    return LocalDateTime.of(year, month, day, hour, minute, second);
+                } else if (json.isJsonPrimitive()) {
+                    return LocalDateTime.parse(json.getAsString(), formatter);
+                }
+                return null;
+            }
+        });
+        
+        gson = builder.create();
     }
     
     public void start() {
-        if (running.getAndSet(true)) {
-            logger.warn("Kafka consumer is already running");
-            return;
-        }
-        
+        running.set(true);
         executorService = Executors.newSingleThreadExecutor();
         executorService.submit(this::consumeMessages);
-        logger.info("Kafka consumer started");
+        logger.info("Kafka consumer started for topic: {}", TASK_CREATED_TOPIC);
     }
     
     public void stop() {
-        if (!running.getAndSet(false)) {
-            return;
-        }
-        
+        running.set(false);
         if (executorService != null) {
             executorService.shutdown();
         }
@@ -57,17 +78,15 @@ public class KafkaConsumerService {
         Properties props = new Properties();
         props.put("bootstrap.servers", bootstrapServers);
         props.put("group.id", groupId);
+        props.put("auto.offset.reset", "latest");
         props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
         props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-        props.put("auto.offset.reset", "latest");
         
         org.apache.kafka.clients.consumer.KafkaConsumer<String, String> consumer = 
             new org.apache.kafka.clients.consumer.KafkaConsumer<>(props);
+        consumer.subscribe(java.util.Collections.singletonList(TASK_CREATED_TOPIC));
         
         try {
-            consumer.subscribe(java.util.Collections.singletonList(TASK_CREATED_TOPIC));
-            logger.info("Subscribed to topic: {}", TASK_CREATED_TOPIC);
-            
             while (running.get()) {
                 try {
                     org.apache.kafka.clients.consumer.ConsumerRecords<String, String> records = 

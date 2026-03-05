@@ -1,10 +1,21 @@
 package com.migration.agent.model;
 
-public class TaskMessage {
+import java.io.Serializable;
+import java.time.LocalDateTime;
+
+public class TaskMessage implements Serializable {
+    private static final long serialVersionUID = 1L;
+    
     private String taskId;
+    private String taskName;
+    private Long userId;
     private DatabaseConfig source;
     private DatabaseConfig target;
     private String migrationMode;
+    private String messageType;
+    private String sourceConnection;
+    private String targetConnection;
+    private LocalDateTime createdAt;
 
     public static class DatabaseConfig {
         private String host;
@@ -84,5 +95,53 @@ public class TaskMessage {
 
     public void setMigrationMode(String migrationMode) {
         this.migrationMode = migrationMode;
+    }
+
+    public String getSourceConnection() {
+        return sourceConnection;
+    }
+
+    public void setSourceConnection(String sourceConnection) {
+        this.sourceConnection = sourceConnection;
+    }
+
+    public String getTargetConnection() {
+        return targetConnection;
+    }
+
+    public void setTargetConnection(String targetConnection) {
+        this.targetConnection = targetConnection;
+    }
+
+    public String getTaskName() {
+        return taskName;
+    }
+
+    public void setTaskName(String taskName) {
+        this.taskName = taskName;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
+    public String getMessageType() {
+        return messageType;
+    }
+
+    public void setMessageType(String messageType) {
+        this.messageType = messageType;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 }

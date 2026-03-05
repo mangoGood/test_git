@@ -36,6 +36,24 @@ public class ProgressManager {
         }
     }
 
+    public ProgressManager(String dbPath, boolean enabled) {
+        this.enabled = enabled;
+        this.progressCache = new ConcurrentHashMap<>();
+        
+        if (enabled) {
+            try {
+                progressDatabase = new ProgressDatabase(dbPath);
+                progressDatabase.initialize();
+                logger.info("进度管理器已启用，数据库路径: {}", dbPath);
+            } catch (SQLException e) {
+                logger.error("初始化进度数据库失败", e);
+                throw new RuntimeException("初始化进度数据库失败", e);
+            }
+        } else {
+            logger.info("进度管理器已禁用");
+        }
+    }
+
     /**
      * 开始表的迁移
      */

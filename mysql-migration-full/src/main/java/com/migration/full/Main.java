@@ -29,17 +29,19 @@ public class Main {
         ProgressManager progressManager = null;
 
         try {
-            // 检查配置文件
-            String configFile = getConfigFile(args);
+            String taskId = getTaskId(args);
+            String configFile = getConfigFile(args, taskId);
+            logger.info("任务 ID: {}", taskId);
             logger.info("使用配置文件: {}", configFile);
 
-            // 加载配置
-            MigrationConfig config = new MigrationConfig(configFile);
+            MigrationConfig config = taskId != null ? 
+                new MigrationConfig(configFile, taskId) : new MigrationConfig(configFile);
             logger.info("源数据库: {}", config.getSourceConfig().getDatabase());
             logger.info("目标数据库: {}", config.getTargetConfig().getDatabase());
 
-            // 创建进度管理器
-            progressManager = new ProgressManager(config.isEnableResume());
+            String progressDbPath = taskId != null ? 
+                "./files/" + taskId + "/migration_progress" : "./migration_progress";
+            progressManager = new ProgressManager(progressDbPath, config.isEnableResume());
             
             // 检查是否有未完成的迁移
             if (progressManager.isEnabled() && progressManager.hasIncompleteProgress()) {
@@ -145,15 +147,42 @@ public class Main {
     }
 
     /**
+     * 获取任务 ID
+     */
+    private static String getTaskId(String[] args) {
+        for (int i = 0; i < args.length - 1; i++) {
+            if ("--task-id".equals(args[i]) || "-t".equals(args[i])) {
+                return args[i + 1];
+            }
+        }
+        String taskId = System.getProperty("task.id");
+        if (taskId != null && !taskId.isEmpty()) {
+            return taskId;
+        }
+        taskId = System.getenv("TASK_ID");
+        if (taskId != null && !taskId.isEmpty()) {
+            return taskId;
+        }
+        return null;
+    }
+
+    /**
      * 获取配置文件路径
      */
-    private static String getConfigFile(String[] args) {
-        if (args.length > 0) {
-            return args[0];
+    private static String getConfigFile(String[] args, String taskId) {
+        for (int i = 0; i < args.length - 1; i++) {
+            if ("--config".equals(args[i]) || "-c".equals(args[i])) {
+                return args[i + 1];
+            }
         }
         
-        // 默认配置文件
-        String defaultConfig = "config.properties";
+        String defaultConfig;
+        if (taskId != null) {
+            defaultConfig = "files/" + taskId + "/config.properties";
+        } else {
+            defaultConfig = "config.properties";
+        }
+        
         File configFile = new File(defaultConfig);
         
         if (configFile.exists()) {

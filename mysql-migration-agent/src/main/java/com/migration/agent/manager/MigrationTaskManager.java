@@ -35,7 +35,7 @@ public class MigrationTaskManager {
         this.jarPath = jarPath;
         this.taskId = taskId;
         this.kafkaProducer = kafkaProducer;
-        this.metadataDbUrl = metadataDbUrl;
+        this.metadataDbUrl = "jdbc:h2:./files/" + taskId + "/metadata;MODE=MySQL;AUTO_SERVER=TRUE";
         this.metadataDbUser = metadataDbUser;
         this.metadataDbPassword = metadataDbPassword;
     }
@@ -51,7 +51,13 @@ public class MigrationTaskManager {
             throw new RuntimeException("Jar file not found: " + jarPath);
         }
         
-        ProcessBuilder pb = new ProcessBuilder("java", "-jar", jarPath);
+        ProcessBuilder pb = new ProcessBuilder(
+            "java", 
+            "-Dtask.id=" + taskId,
+            "-Dlogback.configurationFile=files/" + taskId + "/logback.xml",
+            "-jar", jarPath,
+            "--task-id", taskId
+        );
         pb.redirectErrorStream(true);
         
         logger.info("Starting migration task {} with jar: {}", taskId, jarPath);
@@ -116,8 +122,9 @@ public class MigrationTaskManager {
     }
     
     private void saveProgressToDatabase(int progress) {
-        try (Connection conn = DriverManager.getConnection(metadataDbUrl, metadataDbUser, metadataDbPassword)) {
-            String sql = "MERGE INTO migration_progress (task_id, progress, updated_at) " +
+        String progressDbUrl = "jdbc:h2:./files/" + taskId + "/migration_progress;MODE=MySQL;AUTO_SERVER=TRUE";
+        try (Connection conn = DriverManager.getConnection(progressDbUrl, metadataDbUser, metadataDbPassword)) {
+            String sql = "MERGE INTO task_progress (task_id, progress, updated_at) " +
                         "KEY (task_id) VALUES (?, ?, CURRENT_TIMESTAMP)";
             
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -132,8 +139,9 @@ public class MigrationTaskManager {
     }
     
     private int getProgressFromDatabase() {
-        try (Connection conn = DriverManager.getConnection(metadataDbUrl, metadataDbUser, metadataDbPassword)) {
-            String sql = "SELECT progress FROM migration_progress WHERE task_id = ?";
+        String progressDbUrl = "jdbc:h2:./files/" + taskId + "/migration_progress;MODE=MySQL;AUTO_SERVER=TRUE";
+        try (Connection conn = DriverManager.getConnection(progressDbUrl, metadataDbUser, metadataDbPassword)) {
+            String sql = "SELECT progress FROM task_progress WHERE task_id = ?";
             
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 stmt.setString(1, taskId);

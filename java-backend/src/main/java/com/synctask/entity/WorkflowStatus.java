@@ -5,5 +5,9 @@ public enum WorkflowStatus {
     RUNNING,
     COMPLETED,
     FAILED,
-    PAUSED
+    PAUSED,
+    INCREMENT_RUNNING,
+    FULL_COMPLETED,
+    BINLOG_STARTED,
+    MIGRATION_STARTED
 }

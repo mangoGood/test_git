@@ -30,6 +30,7 @@ public class KafkaProducerService {
         message.setUserId(workflow.getUserId());
         message.setSourceConnection(workflow.getSourceConnection());
         message.setTargetConnection(workflow.getTargetConnection());
+        message.setMigrationMode(workflow.getMigrationMode());
         message.setCreatedAt(workflow.getCreatedAt());
 
         logger.info("发送任务创建消息到 Kafka: taskId={}, topic={}", workflow.getId(), taskCreatedTopic);
@@ -54,6 +55,7 @@ public class KafkaProducerService {
         message.setUserId(workflow.getUserId());
         message.setSourceConnection(workflow.getSourceConnection());
         message.setTargetConnection(workflow.getTargetConnection());
+        message.setMigrationMode(workflow.getMigrationMode());
         message.setCreatedAt(workflow.getCreatedAt());
 
         logger.info("同步发送任务创建消息到 Kafka: taskId={}, topic={}", workflow.getId(), taskCreatedTopic);
@@ -66,5 +68,24 @@ public class KafkaProducerService {
             logger.error("任务创建消息发送失败: taskId={}", workflow.getId(), e);
             throw e;
         }
+    }
+
+    public void sendControlMessage(TaskCreatedMessage message) {
+        String messageType = message.getMessageType();
+        logger.info("发送控制消息到 Kafka: taskId={}, messageType={}, topic={}", 
+            message.getTaskId(), messageType, taskCreatedTopic);
+
+        CompletableFuture<SendResult<String, Object>> future = 
+            kafkaTemplate.send(taskCreatedTopic, message.getTaskId(), message);
+
+        future.whenComplete((result, ex) -> {
+            if (ex == null) {
+                logger.info("控制消息发送成功: taskId={}, messageType={}, partition={}, offset={}", 
+                    message.getTaskId(), messageType, result.getRecordMetadata().partition(), 
+                    result.getRecordMetadata().offset());
+            } else {
+                logger.error("控制消息发送失败: taskId={}, messageType={}", message.getTaskId(), messageType, ex);
+            }
+        });
     }
 }
