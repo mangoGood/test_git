@@ -28,6 +28,7 @@
             background-color: #fff;
             border-right: 1px solid #e8e8e8;
             flex-shrink: 0;
+            margin-left: 16px;
         }
 
         .sidebar-header {
@@ -277,6 +278,34 @@
             gap: 4px;
         }
 
+        .table-header-cell.sortable {
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+
+        .table-header-cell.sortable:hover {
+            background-color: #f0f0f0;
+        }
+
+        .sort-icon {
+            font-size: 12px;
+            color: #999;
+            transition: transform 0.2s;
+        }
+
+        .sort-icon.active {
+            color: #1890ff;
+        }
+
+        .sort-icon.asc {
+            transform: rotate(180deg);
+        }
+
+        .sort-icon.desc {
+            transform: rotate(0deg);
+        }
+
         .table-body {
             min-height: 200px;
         }
@@ -350,6 +379,25 @@
             background-color: #f5f5f5;
             color: #666;
             border: 1px solid #d9d9d9;
+        }
+
+        .status-increment-running {
+            background-color: #f6ffed;
+            color: #52c41a;
+            border: 1px solid #b7eb8f;
+        }
+
+        .status-increment-running .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #52c41a;
+            border-radius: 50%;
+            animation: blink 1s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
         }
 
         /* 进度条 */
@@ -555,11 +603,28 @@
             border: 1px solid #d9d9d9;
             border-radius: 4px;
             font-size: 13px;
+            position: relative;
         }
 
         .form-input:focus {
             outline: none;
             border-color: #1890ff;
+        }
+
+        .form-input.error {
+            border-color: #ff4d4f;
+            text-decoration: underline wavy #ff4d4f;
+            text-decoration-thickness: 1px;
+            text-underline-offset: 3px;
+        }
+
+        .form-input::placeholder {
+            color: #999;
+        }
+
+        .form-input.error::placeholder {
+            color: #ff4d4f;
+            text-decoration: none;
         }
 
         .modal-footer {
@@ -625,17 +690,17 @@
         <!-- 侧边栏 -->
         <aside class="sidebar">
             <div class="sidebar-header">
-                <div class="title">以消费的服务</div>
+                <div class="title">服务列表</div>
             </div>
             <nav class="sidebar-menu">
                 <div class="menu-section">
                     <div class="menu-title">总览</div>
                 </div>
                 
-                <div class="menu-section">
+                <!-- <div class="menu-section">
                     <div class="menu-title">迁移旅程</div>
                     <div class="menu-item">EA Migration Hub</div>
-                </div>
+                </div> -->
                 
                 <div class="menu-section">
                     <div class="menu-title">任务管理</div>
@@ -724,22 +789,22 @@
                         <div class="table-header-cell col-checkbox">
                             <div class="checkbox"></div>
                         </div>
-                        <div class="table-header-cell col-name">
+                        <div class="table-header-cell col-name sortable" data-sort="name" onclick="handleSort('name')">
                             名称/ID
-                            <span class="sort-icon">⇅</span>
+                            <span class="sort-icon" id="sort-icon-name">⇅</span>
                         </div>
-                        <div class="table-header-cell col-status">
+                        <div class="table-header-cell col-status sortable" data-sort="status" onclick="handleSort('status')">
                             状态
-                            <span class="sort-icon">⇅</span>
+                            <span class="sort-icon" id="sort-icon-status">⇅</span>
                         </div>
-                        <div class="table-header-cell col-created">
+                        <div class="table-header-cell col-created sortable" data-sort="created_at" onclick="handleSort('created_at')">
                             创建时间
-                            <span class="sort-icon">⇅</span>
+                            <span class="sort-icon" id="sort-icon-created_at">⇅</span>
                         </div>
                         <div class="table-header-cell col-monitor">监控信息</div>
-                        <div class="table-header-cell col-billing">
+                        <div class="table-header-cell col-billing sortable" data-sort="is_billing" onclick="handleSort('is_billing')">
                             是否计费中
-                            <span class="sort-icon">⇅</span>
+                            <span class="sort-icon" id="sort-icon-is_billing">⇅</span>
                         </div>
                         <div class="table-header-cell col-more">进度</div>
                         <div class="table-header-cell col-action">操作</div>
@@ -797,11 +862,11 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">源数据库连接</label>
-                    <input type="text" class="form-input" id="sourceConnection" placeholder="例如：mysql://user:pass@host:port/db">
+                    <input type="text" class="form-input" id="sourceConnection" placeholder="例如：mysql://user:pass@host:port/db" oninput="validateConnectionInput(this, 'source')">
                 </div>
                 <div class="form-group">
                     <label class="form-label">目标数据库连接</label>
-                    <input type="text" class="form-input" id="targetConnection" placeholder="例如：mysql://user:pass@host:port/db">
+                    <input type="text" class="form-input" id="targetConnection" placeholder="例如：mysql://user:pass@host:port/db" oninput="validateConnectionInput(this, 'target')">
                 </div>
                 <div class="form-group">
                     <label class="form-label">同步模式</label>
@@ -856,13 +921,21 @@
         let pageSize = 10;
         let totalCount = 0; // 总条数
         
+        // 排序相关
+        let sortField = 'created_at'; // 默认按创建时间排序
+        let sortDirection = 'DESC'; // 默认降序（从近到远）
+        
         // 状态映射
         const statusMap = {
             'PENDING': { text: '等待中', class: 'status-pending' },
             'RUNNING': { text: '运行中', class: 'status-running' },
             'COMPLETED': { text: '已完成', class: 'status-completed' },
             'FAILED': { text: '失败', class: 'status-failed' },
-            'PAUSED': { text: '已暂停', class: 'status-paused' }
+            'PAUSED': { text: '已暂停', class: 'status-paused' },
+            'INCREMENT_RUNNING': { text: '增量同步中', class: 'status-increment-running', dot: true },
+            'FULL_COMPLETED': { text: '全量完成', class: 'status-completed' },
+            'BINLOG_STARTED': { text: 'Binlog启动', class: 'status-running' },
+            'MIGRATION_STARTED': { text: '迁移启动', class: 'status-running' }
         };
         
         // 检查登录状态
@@ -947,7 +1020,10 @@
             try {
                 const user = getCurrentUser();
                 const userId = user ? user.id : null;
-                const url = `${API_BASE_URL}/workflows?page=${currentPage}&pageSize=${pageSize}${userId ? `&userId=${userId}` : ''}`;
+                let url = `${API_BASE_URL}/workflows?page=${currentPage}&pageSize=${pageSize}${userId ? `&userId=${userId}` : ''}`;
+                
+                // 添加排序参数
+                url += `&sortBy=${sortField}&sortDirection=${sortDirection}`;
                 
                 const response = await fetch(url, {
                     headers: getAuthHeaders()
@@ -973,6 +1049,41 @@
                 console.error('获取任务列表失败:', error);
                 showNotification('获取任务列表失败', 'error');
             }
+        }
+        
+        // 处理排序
+        function handleSort(field) {
+            if (sortField === field) {
+                // 点击同一列，切换排序方向
+                sortDirection = sortDirection === 'ASC' ? 'DESC' : 'ASC';
+            } else {
+                // 点击不同列，设置新字段并默认降序
+                sortField = field;
+                sortDirection = 'DESC';
+            }
+            
+            // 更新排序图标
+            updateSortIcons();
+            
+            // 重新获取数据
+            fetchWorkflows();
+        }
+        
+        // 更新排序图标
+        function updateSortIcons() {
+            const sortableFields = ['name', 'status', 'created_at', 'is_billing'];
+            
+            sortableFields.forEach(field => {
+                const icon = document.getElementById(`sort-icon-${field}`);
+                if (icon) {
+                    icon.classList.remove('active', 'asc', 'desc');
+                    
+                    if (sortField === field) {
+                        icon.classList.add('active');
+                        icon.classList.add(sortDirection.toLowerCase());
+                    }
+                }
+            });
         }
         
         // 渲染表格
@@ -1026,7 +1137,7 @@
                 </div>
                 <div class="table-cell col-status">
                     <span class="status-tag ${statusInfo.class}">
-                        <span style="width: 6px; height: 6px; border-radius: 50%; background-color: currentColor;"></span>
+                        ${statusInfo.dot ? '<span class="status-dot"></span>' : '<span style="width: 6px; height: 6px; border-radius: 50%; background-color: currentColor;"></span>'}
                         ${statusInfo.text}
                     </span>
                 </div>
@@ -1047,7 +1158,7 @@
                 </div>
                 <div class="table-cell col-action">
                     <div class="action-btns">
-                        ${workflow.status === 'RUNNING' ? 
+                        ${(workflow.status === 'RUNNING' || workflow.status === 'INCREMENT_RUNNING') ? 
                             `<button class="action-btn" onclick="pauseWorkflow('${workflow.id}')">暂停</button>` : 
                             workflow.status === 'PAUSED' ?
                             `<button class="action-btn" onclick="resumeWorkflow('${workflow.id}')">恢复</button>` :
@@ -1143,6 +1254,40 @@
         
         let isSubmitting = false;
         
+        // 验证数据库连接串格式
+        function validateConnectionString(connectionString) {
+            if (!connectionString) {
+                return null;
+            }
+            
+            const regex = /^mysql:\/\/[a-zA-Z0-9_]+:[^@]+@[a-zA-Z0-9.-]+:\d+\/[a-zA-Z0-9_]+$/;
+            if (!regex.test(connectionString)) {
+                return '格式不正确，正确格式为：mysql://user:pass@host:port/db';
+            }
+            return null;
+        }
+        
+        // 实时验证连接串输入
+        function validateConnectionInput(input, type) {
+            const value = input.value.trim();
+            const fieldName = type === 'source' ? '源数据库连接' : '目标数据库连接';
+            
+            if (!value) {
+                input.classList.remove('error');
+                input.placeholder = `例如：mysql://user:pass@host:port/db`;
+                return;
+            }
+            
+            const error = validateConnectionString(value);
+            if (error) {
+                input.classList.add('error');
+                input.placeholder = `${fieldName}${error}`;
+            } else {
+                input.classList.remove('error');
+                input.placeholder = `例如：mysql://user:pass@host:port/db`;
+            }
+        }
+        
         // 创建任务
         async function createTask() {
             if (!checkAuth()) return;
@@ -1155,6 +1300,20 @@
             const name = document.getElementById('taskName').value.trim();
             const sourceConnection = document.getElementById('sourceConnection').value.trim();
             const targetConnection = document.getElementById('targetConnection').value.trim();
+            
+            // 检查是否有输入框错误
+            const sourceInput = document.getElementById('sourceConnection');
+            const targetInput = document.getElementById('targetConnection');
+            
+            if (sourceInput.classList.contains('error')) {
+                showNotification('源数据库连接串格式不正确', 'error');
+                return;
+            }
+            
+            if (targetInput.classList.contains('error')) {
+                showNotification('目标数据库连接串格式不正确', 'error');
+                return;
+            }
             
             // 获取选中的同步模式
             const modeFull = document.getElementById('modeFull');
@@ -1315,7 +1474,7 @@
                             <div style="font-size: 13px; color: #666;">当前状态:</div>
                             <div>
                                 <span class="status-tag ${statusInfo.class}">
-                                    <span style="width: 6px; height: 6px; border-radius: 50%; background-color: currentColor;"></span>
+                                    ${statusInfo.dot ? '<span class="status-dot"></span>' : '<span style="width: 6px; height: 6px; border-radius: 50%; background-color: currentColor;"></span>'}
                                     ${statusInfo.text}
                                 </span>
                             </div>
@@ -1427,6 +1586,14 @@
             document.getElementById('taskName').value = '';
             document.getElementById('sourceConnection').value = '';
             document.getElementById('targetConnection').value = '';
+            
+            // 清除错误状态
+            const sourceInput = document.getElementById('sourceConnection');
+            const targetInput = document.getElementById('targetConnection');
+            sourceInput.classList.remove('error');
+            targetInput.classList.remove('error');
+            sourceInput.placeholder = '例如：mysql://user:pass@host:port/db';
+            targetInput.placeholder = '例如：mysql://user:pass@host:port/db';
         }
         
         // 事件监听
@@ -1463,6 +1630,7 @@
             // 检查登录状态并显示用户信息
             if (checkAuth()) {
                 displayUserInfo();
+                updateSortIcons();
                 fetchWorkflows();
             }
             

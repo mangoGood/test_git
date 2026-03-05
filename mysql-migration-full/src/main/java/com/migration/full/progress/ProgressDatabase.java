@@ -13,10 +13,16 @@ import java.util.List;
 public class ProgressDatabase {
     private static final Logger logger = LoggerFactory.getLogger(ProgressDatabase.class);
     
-    private static final String DB_URL = "jdbc:h2:./migration_progress;MODE=MySQL;AUTO_SERVER=TRUE";
+    private static final String DEFAULT_DB_URL = "jdbc:h2:./migration_progress;MODE=MySQL;AUTO_SERVER=TRUE";
     private Connection connection;
+    private String dbUrl;
 
     public ProgressDatabase() {
+        this(DEFAULT_DB_URL);
+    }
+    
+    public ProgressDatabase(String dbPath) {
+        this.dbUrl = "jdbc:h2:" + dbPath + ";MODE=MySQL;AUTO_SERVER=TRUE";
         try {
             Class.forName("org.h2.Driver");
         } catch (ClassNotFoundException e) {
@@ -29,9 +35,9 @@ public class ProgressDatabase {
      * 初始化数据库连接和表结构
      */
     public void initialize() throws SQLException {
-        connection = DriverManager.getConnection(DB_URL, "sa", "");
+        connection = DriverManager.getConnection(dbUrl, "sa", "");
         createTables();
-        logger.info("进度数据库初始化成功");
+        logger.info("进度数据库初始化成功，URL: {}", dbUrl);
     }
 
     /**
@@ -53,6 +59,16 @@ public class ProgressDatabase {
         try (Statement stmt = connection.createStatement()) {
             stmt.execute(sql);
             logger.debug("进度表创建成功");
+        }
+        
+        String taskProgressSql = "CREATE TABLE IF NOT EXISTS task_progress (" +
+                                 "task_id VARCHAR(36) PRIMARY KEY, " +
+                                 "progress INT NOT NULL DEFAULT 0, " +
+                                 "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)";
+        
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute(taskProgressSql);
+            logger.debug("任务进度表创建成功");
         }
     }
 
@@ -205,6 +221,40 @@ public class ProgressDatabase {
         progress.setErrorMessage(rs.getString("error_message"));
         
         return progress;
+    }
+
+    /**
+     * 保存或更新任务进度
+     */
+    public void saveTaskProgress(String taskId, int progress) throws SQLException {
+        String sql = "MERGE INTO task_progress (task_id, progress, updated_at) " +
+                     "KEY (task_id) VALUES (?, ?, CURRENT_TIMESTAMP)";
+        
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, taskId);
+            pstmt.setInt(2, progress);
+            pstmt.executeUpdate();
+            logger.debug("保存任务进度: taskId={}, progress={}", taskId, progress);
+        }
+    }
+
+    /**
+     * 获取任务进度
+     */
+    public int getTaskProgress(String taskId) throws SQLException {
+        String sql = "SELECT progress FROM task_progress WHERE task_id = ?";
+        
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, taskId);
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("progress");
+                }
+            }
+        }
+        
+        return 0;
     }
 
     /**

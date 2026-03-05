@@ -1,5 +1,6 @@
 package com.synctask.service;
 
+import com.synctask.dto.TaskCreatedMessage;
 import com.synctask.entity.Workflow;
 import com.synctask.entity.WorkflowLog;
 import com.synctask.entity.WorkflowStatus;
@@ -9,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -26,12 +28,13 @@ public class WorkflowService {
     private KafkaProducerService kafkaProducerService;
 
     @Transactional
-    public Workflow createWorkflow(String name, String sourceConnection, String targetConnection, Long userId) {
+    public Workflow createWorkflow(String name, String sourceConnection, String targetConnection, String migrationMode, Long userId) {
         Workflow workflow = new Workflow();
         workflow.setId(UUID.randomUUID().toString());
         workflow.setName(name);
         workflow.setSourceConnection(sourceConnection != null ? sourceConnection : "default-source");
         workflow.setTargetConnection(targetConnection != null ? targetConnection : "default-target");
+        workflow.setMigrationMode(migrationMode != null ? migrationMode : "full");
         workflow.setStatus(WorkflowStatus.PENDING);
         workflow.setUserId(userId);
         workflow.setProgress(0);
@@ -51,9 +54,29 @@ public class WorkflowService {
         return savedWorkflow;
     }
 
-    public Page<Workflow> getWorkflowsByUserId(Long userId, int page, int pageSize) {
-        Pageable pageable = PageRequest.of(page - 1, pageSize);
+    public Page<Workflow> getWorkflowsByUserId(Long userId, int page, int pageSize, String sortBy, String sortDirection) {
+        // 将前端字段名映射为 JPA 实体字段名
+        String fieldName = mapSortField(sortBy);
+        
+        Sort.Direction direction = sortDirection.equalsIgnoreCase("ASC") ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Sort sort = Sort.by(direction, fieldName);
+        Pageable pageable = PageRequest.of(page - 1, pageSize, sort);
         return workflowRepository.findByUserId(userId, pageable);
+    }
+    
+    private String mapSortField(String sortBy) {
+        switch (sortBy) {
+            case "name":
+                return "name";
+            case "status":
+                return "status";
+            case "created_at":
+                return "createdAt";
+            case "is_billing":
+                return "isBilling";
+            default:
+                return "createdAt";
+        }
     }
 
     public Workflow getWorkflowById(String id, Long userId) {
@@ -77,7 +100,19 @@ public class WorkflowService {
         Workflow workflow = getWorkflowById(id, userId);
         workflow.setStatus(WorkflowStatus.PAUSED);
         workflowRepository.save(workflow);
-        addLog(workflow.getId(), WorkflowLog.LogLevel.INFO, "任务已暂停，状态: 暂停中");
+        
+        TaskCreatedMessage message = new TaskCreatedMessage();
+        message.setTaskId(workflow.getId());
+        message.setTaskName(workflow.getName());
+        message.setUserId(workflow.getUserId());
+        message.setSourceConnection(workflow.getSourceConnection());
+        message.setTargetConnection(workflow.getTargetConnection());
+        message.setMigrationMode(workflow.getMigrationMode());
+        message.setCreatedAt(workflow.getCreatedAt());
+        message.setMessageType("stop");
+        
+        kafkaProducerService.sendControlMessage(message);
+        addLog(workflow.getId(), WorkflowLog.LogLevel.INFO, "任务已暂停，发送停止消息到 Kafka");
     }
 
     @Transactional
@@ -85,13 +120,45 @@ public class WorkflowService {
         Workflow workflow = getWorkflowById(id, userId);
         workflow.setStatus(WorkflowStatus.RUNNING);
         workflowRepository.save(workflow);
-        addLog(workflow.getId(), WorkflowLog.LogLevel.INFO, "任务已恢复，等待任务执行服务处理");
+        
+        TaskCreatedMessage message = new TaskCreatedMessage();
+        message.setTaskId(workflow.getId());
+        message.setTaskName(workflow.getName());
+        message.setUserId(workflow.getUserId());
+        message.setSourceConnection(workflow.getSourceConnection());
+        message.setTargetConnection(workflow.getTargetConnection());
+        message.setMigrationMode(workflow.getMigrationMode());
+        message.setCreatedAt(workflow.getCreatedAt());
+        message.setMessageType("resume");
+        
+        kafkaProducerService.sendControlMessage(message);
+        addLog(workflow.getId(), WorkflowLog.LogLevel.INFO, "任务已恢复，发送恢复消息到 Kafka，等待任务执行服务处理");
     }
 
     @Transactional
     public void deleteWorkflow(String id, Long userId) {
         Workflow workflow = getWorkflowById(id, userId);
-        workflowRepository.delete(workflow);
+        
+        TaskCreatedMessage message = new TaskCreatedMessage();
+        message.setTaskId(workflow.getId());
+        message.setTaskName(workflow.getName());
+        message.setUserId(workflow.getUserId());
+        message.setSourceConnection(workflow.getSourceConnection());
+        message.setTargetConnection(workflow.getTargetConnection());
+        message.setMigrationMode(workflow.getMigrationMode());
+        message.setCreatedAt(workflow.getCreatedAt());
+        message.setMessageType("delete");
+        
+        try {
+            kafkaProducerService.sendControlMessage(message);
+            addLog(workflow.getId(), WorkflowLog.LogLevel.INFO, "发送删除消息到 Kafka，停止所有相关进程");
+        } catch (Exception e) {
+            addLog(workflow.getId(), WorkflowLog.LogLevel.WARNING, "Kafka 删除消息发送失败: " + e.getMessage());
+        }
+        
+        workflow.setIsDeleted(true);
+        workflowRepository.save(workflow);
+        addLog(workflow.getId(), WorkflowLog.LogLevel.INFO, "任务已删除（软删除），状态: 已删除");
     }
 
     private void addLog(String workflowId, WorkflowLog.LogLevel level, String message) {

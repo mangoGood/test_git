@@ -21,8 +21,14 @@ public class MigrationConfig {
     private Set<String> includedDatabases;
     private Set<String> includedTables;
     private String checkpointDbPath;
+    private String taskId;
 
     public MigrationConfig(String configFile) throws IOException {
+        loadConfig(configFile);
+    }
+    
+    public MigrationConfig(String configFile, String taskId) throws IOException {
+        this.taskId = taskId;
         loadConfig(configFile);
     }
 
@@ -63,8 +69,10 @@ public class MigrationConfig {
         includedDatabases = parseStringSet(props.getProperty("migration.included.databases", ""));
         includedTables = parseStringSet(props.getProperty("migration.included.tables", ""));
         
-        // 加载 checkpoint 数据库路径
-        checkpointDbPath = props.getProperty("migration.checkpoint.db.path", "./checkpoint/checkpoint");
+        // 加载 checkpoint 数据库路径，支持按任务 ID 隔离
+        String defaultCheckpointPath = taskId != null ? 
+            "./files/" + taskId + "/checkpoint/checkpoint" : "./checkpoint/checkpoint";
+        checkpointDbPath = props.getProperty("migration.checkpoint.db.path", defaultCheckpointPath);
     }
     
     /**
@@ -130,5 +138,9 @@ public class MigrationConfig {
     
     public String getCheckpointDbPath() {
         return checkpointDbPath;
+    }
+    
+    public String getTaskId() {
+        return taskId;
     }
 }

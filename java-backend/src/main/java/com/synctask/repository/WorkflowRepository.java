@@ -11,9 +11,11 @@ import java.util.List;
 
 @Repository
 public interface WorkflowRepository extends JpaRepository<Workflow, String> {
-    @Query("SELECT w FROM Workflow w WHERE w.userId = :userId ORDER BY w.createdAt DESC")
+    @Query("SELECT w FROM Workflow w WHERE w.userId = :userId AND w.isDeleted = false")
     Page<Workflow> findByUserId(@Param("userId") Long userId, Pageable pageable);
     
     List<Workflow> findByUserId(Long userId);
     List<Workflow> findByUserIdAndStatus(Long userId, com.synctask.entity.WorkflowStatus status);
+    
+    List<Workflow> findByUserIdAndIsDeletedFalse(Long userId);
 }

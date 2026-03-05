@@ -134,6 +134,14 @@ public class KafkaConsumerService {
                     : "任务执行失败";
             case PAUSED:
                 return "任务已暂停";
+            case INCREMENT_RUNNING:
+                return "增量同步中";
+            case FULL_COMPLETED:
+                return "全量迁移完成，准备启动增量同步";
+            case BINLOG_STARTED:
+                return "Binlog 监控已启动";
+            case MIGRATION_STARTED:
+                return "迁移任务已启动";
             default:
                 return String.format("任务状态更新为: %s", newStatus.name());
         }

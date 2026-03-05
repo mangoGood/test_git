@@ -3,10 +3,13 @@ package com.migration.agent;
 import com.migration.agent.manager.MigrationTaskManager;
 import com.migration.agent.manager.ProcessManager;
 import com.migration.agent.model.TaskMessage;
+import com.migration.agent.model.TaskStateInfo;
 import com.migration.agent.model.TaskStatusMessage;
 import com.migration.agent.service.ConfigService;
 import com.migration.agent.service.KafkaConsumerService;
 import com.migration.agent.service.KafkaProducerService;
+import com.migration.agent.service.TaskStateService;
+import com.migration.agent.thread.MigrationAgentThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,7 +18,8 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.Statement;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.*;
 
 public class AgentMain {
@@ -23,7 +27,6 @@ public class AgentMain {
     
     private static final String KAFKA_BOOTSTRAP_SERVERS = "192.168.117.2:19092";
     private static final String CONSUMER_GROUP_ID = "migration-agent-group";
-    private static final String METADATA_DB_URL = "jdbc:h2:./metadata";
     private static final String METADATA_DB_USER = "sa";
     private static final String METADATA_DB_PASSWORD = "";
     
@@ -35,12 +38,15 @@ public class AgentMain {
     private KafkaConsumerService kafkaConsumer;
     private KafkaProducerService kafkaProducer;
     private ConfigService configService;
-    private ProcessManager binlogManager;
-    private MigrationTaskManager migrationTaskManager;
+    private TaskStateService taskStateService;
     private ScheduledExecutorService binlogMonitorExecutor;
+    private ExecutorService taskExecutor;
     
-    private volatile String currentTaskId;
-    private volatile boolean binlogStarted = false;
+    private final ConcurrentHashMap<String, ProcessManager> binlogManagers = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, MigrationTaskManager> migrationTaskManagers = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, MigrationAgentThread> migrationAgentThreads = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Thread> migrationAgentThreadWrappers = new ConcurrentHashMap<>();
+    private final Set<String> pausedTasks = ConcurrentHashMap.newKeySet();
     
     public static void main(String[] args) {
         AgentMain agent = new AgentMain();
@@ -55,84 +61,297 @@ public class AgentMain {
     public void start() {
         logger.info("Starting Migration Agent...");
         
-        initializeMetadataDatabase();
-        
         kafkaProducer = new KafkaProducerService(KAFKA_BOOTSTRAP_SERVERS);
         configService = new ConfigService();
-        
-        binlogManager = new ProcessManager(BINLOG_JAR_PATH, "BinlogMain");
+        taskStateService = new TaskStateService();
         
         kafkaConsumer = new KafkaConsumerService(KAFKA_BOOTSTRAP_SERVERS, CONSUMER_GROUP_ID, 
             this::handleTaskMessage);
         
         kafkaConsumer.start();
         
-        binlogMonitorExecutor = Executors.newSingleThreadScheduledExecutor();
-        binlogMonitorExecutor.scheduleAtFixedRate(this::monitorBinlogProcess, 
+        taskExecutor = Executors.newCachedThreadPool(r -> {
+            Thread t = new Thread(r);
+            t.setName("task-executor");
+            return t;
+        });
+        
+        binlogMonitorExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r);
+            t.setName("binlog-monitor");
+            return t;
+        });
+        binlogMonitorExecutor.scheduleAtFixedRate(this::monitorBinlogProcesses, 
             BINLOG_MONITOR_INTERVAL, BINLOG_MONITOR_INTERVAL, TimeUnit.MILLISECONDS);
         
-        logger.info("Migration Agent started successfully");
+        logger.info("Migration Agent started successfully, waiting for tasks...");
     }
     
-    private void initializeMetadataDatabase() {
-        try (Connection conn = DriverManager.getConnection(METADATA_DB_URL, METADATA_DB_USER, METADATA_DB_PASSWORD);
-             Statement stmt = conn.createStatement()) {
-            
-            String createTableSql = "CREATE TABLE IF NOT EXISTS migration_progress (" +
-                                    "task_id VARCHAR(255) PRIMARY KEY, " +
-                                    "progress INT NOT NULL, " +
-                                    "updated_at TIMESTAMP NOT NULL)";
-            stmt.execute(createTableSql);
-            
-            logger.info("Metadata database initialized");
-        } catch (Exception e) {
-            logger.error("Error initializing metadata database", e);
-            throw new RuntimeException("Failed to initialize metadata database", e);
+    public void stop() {
+        logger.info("Stopping all tasks...");
+        
+        for (Map.Entry<String, MigrationAgentThread> entry : migrationAgentThreads.entrySet()) {
+            try {
+                String taskId = entry.getKey();
+                MigrationAgentThread thread = entry.getValue();
+                logger.info("Stopping migration agent thread for task: {}", taskId);
+                thread.stop();
+            } catch (Exception e) {
+                logger.error("Error stopping migration agent thread", e);
+            }
         }
+        migrationAgentThreads.clear();
+        
+        for (Map.Entry<String, Thread> entry : migrationAgentThreadWrappers.entrySet()) {
+            try {
+                entry.getValue().interrupt();
+            } catch (Exception e) {
+                logger.error("Error interrupting thread wrapper", e);
+            }
+        }
+        migrationAgentThreadWrappers.clear();
+        
+        for (Map.Entry<String, MigrationTaskManager> entry : migrationTaskManagers.entrySet()) {
+            try {
+                String taskId = entry.getKey();
+                MigrationTaskManager manager = entry.getValue();
+                logger.info("Stopping migration task: {}", taskId);
+                manager.stop();
+            } catch (Exception e) {
+                logger.error("Error stopping migration task", e);
+            }
+        }
+        migrationTaskManagers.clear();
+        
+        for (Map.Entry<String, ProcessManager> entry : binlogManagers.entrySet()) {
+            try {
+                String taskId = entry.getKey();
+                ProcessManager manager = entry.getValue();
+                logger.info("Stopping binlog process for task: {}", taskId);
+                manager.stop();
+            } catch (Exception e) {
+                logger.error("Error stopping binlog process", e);
+            }
+        }
+        binlogManagers.clear();
+        
+        pausedTasks.clear();
+        
+        if (binlogMonitorExecutor != null) {
+            binlogMonitorExecutor.shutdown();
+        }
+        
+        if (taskExecutor != null) {
+            taskExecutor.shutdown();
+        }
+        
+        if (kafkaConsumer != null) {
+            kafkaConsumer.stop();
+        }
+        
+        logger.info("Agent stopped");
     }
     
     private void handleTaskMessage(TaskMessage taskMessage) {
         String taskId = taskMessage.getTaskId();
-        String migrationMode = taskMessage.getMigrationMode();
-        logger.info("Received task message: {} with migration mode: {}", taskId, migrationMode);
+        String messageType = taskMessage.getMessageType();
+        
+        logger.info("Received task message: {} with messageType: {}", taskId, messageType);
+        
+        if ("stop".equals(messageType)) {
+            taskExecutor.submit(() -> handleStopMessage(taskMessage));
+        } else if ("resume".equals(messageType)) {
+            taskExecutor.submit(() -> handleResumeMessage(taskMessage));
+        } else if ("delete".equals(messageType)) {
+            taskExecutor.submit(() -> handleDeleteMessage(taskMessage));
+        } else {
+            taskExecutor.submit(() -> processTask(taskMessage, taskId, taskMessage.getMigrationMode()));
+        }
+    }
+    
+    private void handleDeleteMessage(TaskMessage taskMessage) {
+        String taskId = taskMessage.getTaskId();
+        logger.info("Handling delete message for task: {}", taskId);
+        
+        pausedTasks.remove(taskId);
+        
+        stopTaskById(taskId);
+        
+        stopMigrationAgentThread(taskId);
+        
+        logger.info("Task {} deleted, all processes stopped", taskId);
+    }
+    
+    private void handleStopMessage(TaskMessage taskMessage) {
+        String taskId = taskMessage.getTaskId();
+        logger.info("Handling stop message for task: {}", taskId);
+        
+        pausedTasks.add(taskId);
         
         try {
-            if (currentTaskId != null && !currentTaskId.equals(taskId)) {
-                logger.warn("New task received while previous task {} is still running", currentTaskId);
-                stopCurrentTask();
+            int progress = getProgressFromDatabase(taskId);
+            
+            TaskStateInfo stateInfo = new TaskStateInfo(taskId);
+            stateInfo.setTaskName(taskMessage.getTaskName());
+            stateInfo.setUserId(taskMessage.getUserId());
+            stateInfo.setMigrationMode(taskMessage.getMigrationMode());
+            stateInfo.setSourceConnection(taskMessage.getSourceConnection());
+            stateInfo.setTargetConnection(taskMessage.getTargetConnection());
+            stateInfo.setCreatedAt(taskMessage.getCreatedAt());
+            stateInfo.setStatus("PAUSED");
+            stateInfo.setProgress(progress);
+            
+            taskStateService.saveTaskState(stateInfo);
+            logger.info("Task state saved to H2 metadata database for task: {}", taskId);
+            
+            stopTaskById(taskId);
+            
+            stopMigrationAgentThread(taskId);
+            
+            sendStatus(taskId, "PAUSED", "Task paused, state saved to H2", progress);
+            
+        } catch (Exception e) {
+            logger.error("Error handling stop message for task: {}", taskId, e);
+            pausedTasks.remove(taskId);
+        }
+    }
+    
+    private void handleResumeMessage(TaskMessage taskMessage) {
+        String taskId = taskMessage.getTaskId();
+        logger.info("Handling resume message for task: {}", taskId);
+        
+        pausedTasks.remove(taskId);
+        
+        try {
+            TaskStateInfo stateInfo = taskStateService.getTaskState(taskId);
+            
+            if (stateInfo == null) {
+                logger.warn("No saved state found in H2 for task: {}, starting fresh", taskId);
+                stateInfo = new TaskStateInfo(taskId);
+                stateInfo.setMigrationMode(taskMessage.getMigrationMode());
+                stateInfo.setSourceConnection(taskMessage.getSourceConnection());
+                stateInfo.setTargetConnection(taskMessage.getTargetConnection());
             }
             
-            currentTaskId = taskId;
+            configService.updateConfig(taskMessage);
+            logger.info("Config updated for task: {}", taskId);
             
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+            
+            String migrationMode = stateInfo.getMigrationMode();
+            int progress = stateInfo.getProgress();
+            
+            logger.info("Resuming task: {} with mode: {}, progress: {}", taskId, migrationMode, progress);
+            
+            if ("fullAndIncre".equals(migrationMode)) {
+                MigrationAgentThread agentThread = new MigrationAgentThread(taskMessage, kafkaProducer);
+                migrationAgentThreads.put(taskId, agentThread);
+                
+                Thread threadWrapper = new Thread(agentThread, "MigrationAgentThread-" + taskId);
+                threadWrapper.setDaemon(true);
+                migrationAgentThreadWrappers.put(taskId, threadWrapper);
+                threadWrapper.start();
+                
+                logger.info("MigrationAgentThread started for task: {}", taskId);
+            } else {
+                if (progress < 100) {
+                    startMigrationForTask(taskId);
+                    sendStatus(taskId, "RUNNING", "Task resumed, migration in progress", progress);
+                } else {
+                    sendStatus(taskId, "COMPLETED", "Task completed", progress);
+                }
+            }
+            
+        } catch (Exception e) {
+            logger.error("Error handling resume message for task: {}", taskId, e);
+            sendStatus(taskId, "FAILED", "Error resuming task: " + e.getMessage(), 0);
+        }
+    }
+    
+    private void stopMigrationAgentThread(String taskId) {
+        MigrationAgentThread agentThread = migrationAgentThreads.remove(taskId);
+        if (agentThread != null) {
+            try {
+                agentThread.stop();
+                logger.info("MigrationAgentThread stopped for task: {}", taskId);
+            } catch (Exception e) {
+                logger.error("Error stopping MigrationAgentThread for task: {}", taskId, e);
+            }
+        }
+        
+        Thread threadWrapper = migrationAgentThreadWrappers.remove(taskId);
+        if (threadWrapper != null) {
+            try {
+                threadWrapper.interrupt();
+                logger.info("MigrationAgentThread wrapper interrupted for task: {}", taskId);
+            } catch (Exception e) {
+                logger.error("Error interrupting thread wrapper for task: {}", taskId, e);
+            }
+        }
+    }
+    
+    private void stopTaskById(String taskId) {
+        if (migrationTaskManagers.containsKey(taskId)) {
+            MigrationTaskManager manager = migrationTaskManagers.remove(taskId);
+            try {
+                manager.stop();
+                logger.info("Migration task stopped for task: {}", taskId);
+            } catch (Exception e) {
+                logger.error("Error stopping migration task for task: {}", taskId, e);
+            }
+        }
+        
+        if (binlogManagers.containsKey(taskId)) {
+            ProcessManager manager = binlogManagers.remove(taskId);
+            try {
+                manager.stop();
+                logger.info("Binlog process stopped for task: {}", taskId);
+            } catch (Exception e) {
+                logger.error("Error stopping binlog process for task: {}", taskId, e);
+            }
+        }
+    }
+    
+    private void processTask(TaskMessage taskMessage, String taskId, String migrationMode) {
+        try {
             sendStatus(taskId, "RECEIVED", "Task received, preparing migration", 0);
             
             configService.updateConfig(taskMessage);
             logger.info("Config updated for task: {}", taskId);
             
-            if ("fullAndIncre".equals(migrationMode)) {
-                if (!binlogStarted) {
-                    binlogManager.start();
-                    binlogStarted = true;
-                    sendStatus(taskId, "BINLOG_STARTED", "Binlog monitoring started", 0);
-                }
-            } else {
-                logger.info("Full migration mode, skipping binlog process");
-            }
-            
-            if (migrationTaskManager != null && migrationTaskManager.isRunning()) {
-                logger.warn("Migration task is already running for task: {}", taskId);
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 return;
             }
             
-            migrationTaskManager = new MigrationTaskManager(
-                MIGRATION_FULL_JAR_PATH, taskId, kafkaProducer,
-                METADATA_DB_URL, METADATA_DB_USER, METADATA_DB_PASSWORD
-            );
+            File configFile = new File("files/" + taskId + "/config.properties");
+            if (configFile.exists()) {
+                logger.info("Config file verified at: {}", configFile.getAbsolutePath());
+            } else {
+                logger.warn("Config file not found at: {}", configFile.getAbsolutePath());
+            }
             
-            migrationTaskManager.start();
-            sendStatus(taskId, "MIGRATION_STARTED", "Full migration started", 0);
-            
-            logger.info("Migration task started for: {}", taskId);
+            if ("fullAndIncre".equals(migrationMode)) {
+                MigrationAgentThread agentThread = new MigrationAgentThread(taskMessage, kafkaProducer);
+                migrationAgentThreads.put(taskId, agentThread);
+                
+                Thread threadWrapper = new Thread(agentThread, "MigrationAgentThread-" + taskId);
+                threadWrapper.setDaemon(true);
+                migrationAgentThreadWrappers.put(taskId, threadWrapper);
+                threadWrapper.start();
+                
+                logger.info("MigrationAgentThread started for fullAndIncre task: {}", taskId);
+            } else {
+                logger.info("Full migration mode, skipping binlog process for task: {}", taskId);
+                startMigrationForTask(taskId);
+            }
             
         } catch (Exception e) {
             logger.error("Error handling task message: {}", taskId, e);
@@ -140,33 +359,72 @@ public class AgentMain {
         }
     }
     
-    private void monitorBinlogProcess() {
-        if (binlogStarted && currentTaskId != null) {
+    private void startBinlogForTask(String taskId, TaskMessage taskMessage) throws Exception {
+        if (binlogManagers.containsKey(taskId)) {
+            logger.warn("Binlog process already running for task: {}", taskId);
+            return;
+        }
+        
+        ProcessManager binlogManager = new ProcessManager(BINLOG_JAR_PATH, "BinlogMain-" + taskId);
+        binlogManager.setTaskId(taskId);
+        binlogManager.start();
+        
+        binlogManagers.put(taskId, binlogManager);
+        sendStatus(taskId, "BINLOG_STARTED", "Binlog monitoring started for task: " + taskId, 0);
+        logger.info("Binlog process started for task: {}", taskId);
+    }
+    
+    private void startMigrationForTask(String taskId) throws Exception {
+        if (migrationTaskManagers.containsKey(taskId)) {
+            MigrationTaskManager existing = migrationTaskManagers.get(taskId);
+            if (existing.isRunning()) {
+                logger.warn("Migration task already running for task: {}", taskId);
+                return;
+            }
+        }
+        
+        logger.info("Starting migration-full process for task: {}", taskId);
+        
+        MigrationTaskManager migrationTaskManager = new MigrationTaskManager(
+            MIGRATION_FULL_JAR_PATH, taskId, kafkaProducer,
+            null, METADATA_DB_USER, METADATA_DB_PASSWORD
+        );
+        
+        migrationTaskManagers.put(taskId, migrationTaskManager);
+        
+        migrationTaskManager.start();
+        sendStatus(taskId, "MIGRATION_STARTED", "Full migration started for task: " + taskId, 0);
+        
+        logger.info("Migration task started for: {}", taskId);
+    }
+    
+    private void monitorBinlogProcesses() {
+        for (Map.Entry<String, ProcessManager> entry : binlogManagers.entrySet()) {
+            String taskId = entry.getKey();
+            
+            if (pausedTasks.contains(taskId)) {
+                logger.debug("Skipping monitoring for paused task: {}", taskId);
+                continue;
+            }
+            
+            ProcessManager binlogManager = entry.getValue();
+            
             try {
                 binlogManager.ensureRunning();
             } catch (Exception e) {
-                logger.error("Error monitoring binlog process", e);
-                sendStatus(currentTaskId, "WARNING", "Binlog process monitoring error", 
-                    getProgressFromDatabase(currentTaskId));
+                if (!pausedTasks.contains(taskId)) {
+                    logger.error("Error monitoring binlog process for task: {}", taskId, e);
+                }
             }
         }
     }
     
-    private void stopCurrentTask() {
-        if (migrationTaskManager != null) {
-            migrationTaskManager.stop();
-            migrationTaskManager = null;
-        }
-        
-        if (binlogStarted) {
-            binlogManager.stop();
-            binlogStarted = false;
-        }
-        
-        currentTaskId = null;
-    }
-    
     private void sendStatus(String taskId, String status, String message, int progress) {
+        if (pausedTasks.contains(taskId)) {
+            logger.debug("Skipping status report for paused task: {}", taskId);
+            return;
+        }
+        
         TaskStatusMessage statusMessage = new TaskStatusMessage();
         statusMessage.setTaskId(taskId);
         statusMessage.setStatus(status);
@@ -177,8 +435,9 @@ public class AgentMain {
     }
     
     private int getProgressFromDatabase(String taskId) {
-        try (Connection conn = DriverManager.getConnection(METADATA_DB_URL, METADATA_DB_USER, METADATA_DB_PASSWORD);
-             PreparedStatement stmt = conn.prepareStatement("SELECT progress FROM migration_progress WHERE task_id = ?")) {
+        String progressDbUrl = "jdbc:h2:./files/" + taskId + "/migration_progress;MODE=MySQL;AUTO_SERVER=TRUE";
+        try (Connection conn = DriverManager.getConnection(progressDbUrl, METADATA_DB_USER, METADATA_DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement("SELECT progress FROM task_progress WHERE task_id = ?")) {
             
             stmt.setString(1, taskId);
             ResultSet rs = stmt.executeQuery();
@@ -187,36 +446,9 @@ public class AgentMain {
                 return rs.getInt("progress");
             }
         } catch (Exception e) {
-            logger.error("Error getting progress from database for task: {}", taskId, e);
+            logger.debug("Error getting progress from database for task: {}", taskId, e);
         }
         
         return 0;
-    }
-    
-    public void stop() {
-        logger.info("Stopping Migration Agent...");
-        
-        if (binlogMonitorExecutor != null) {
-            binlogMonitorExecutor.shutdown();
-            try {
-                if (!binlogMonitorExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
-                    binlogMonitorExecutor.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                binlogMonitorExecutor.shutdownNow();
-            }
-        }
-        
-        if (kafkaConsumer != null) {
-            kafkaConsumer.stop();
-        }
-        
-        stopCurrentTask();
-        
-        if (kafkaProducer != null) {
-            kafkaProducer.close();
-        }
-        
-        logger.info("Migration Agent stopped");
     }
 }

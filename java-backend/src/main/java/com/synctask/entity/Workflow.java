@@ -42,6 +42,12 @@ public class Workflow {
     @Column(name = "is_billing")
     private Boolean isBilling = false;
 
+    @Column(name = "migration_mode")
+    private String migrationMode = "full";
+
+    @Column(name = "is_deleted")
+    private Boolean isDeleted = false;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -147,5 +153,21 @@ public class Workflow {
 
     public void setIsBilling(Boolean isBilling) {
         this.isBilling = isBilling;
+    }
+
+    public String getMigrationMode() {
+        return migrationMode;
+    }
+
+    public void setMigrationMode(String migrationMode) {
+        this.migrationMode = migrationMode;
+    }
+
+    public Boolean getIsDeleted() {
+        return isDeleted;
+    }
+
+    public void setIsDeleted(Boolean isDeleted) {
+        this.isDeleted = isDeleted;
     }
 }

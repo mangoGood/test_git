@@ -8,6 +8,7 @@ public class TaskCreatedMessage {
     private Long userId;
     private String sourceConnection;
     private String targetConnection;
+    private String migrationMode;
     private LocalDateTime createdAt;
     private String messageType;
 
@@ -53,6 +54,14 @@ public class TaskCreatedMessage {
 
     public void setTargetConnection(String targetConnection) {
         this.targetConnection = targetConnection;
+    }
+
+    public String getMigrationMode() {
+        return migrationMode;
+    }
+
+    public void setMigrationMode(String migrationMode) {
+        this.migrationMode = migrationMode;
     }
 
     public LocalDateTime getCreatedAt() {

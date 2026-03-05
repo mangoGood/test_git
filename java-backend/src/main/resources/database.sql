@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS users (
     INDEX idx_username (username),
     INDEX idx_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
-
+ƒ
 -- 创建工作流任务表
 CREATE TABLE IF NOT EXISTS workflows (
     id VARCHAR(36) PRIMARY KEY,
@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS workflows (
     status ENUM('PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'PAUSED') DEFAULT 'PENDING' COMMENT '任务状态',
     progress INT DEFAULT 0 COMMENT '进度百分比',
     user_id BIGINT NOT NULL COMMENT '用户ID',
+    migration_mode ENUM('full', 'fullAndIncre') DEFAULT 'full' COMMENT '迁移模式：full-全量同步，fullAndIncre-全量+增量同步',
+    is_deleted TINYINT(1) DEFAULT 0 COMMENT '是否软删除',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     completed_at TIMESTAMP NULL COMMENT '完成时间',
@@ -34,6 +36,7 @@ CREATE TABLE IF NOT EXISTS workflows (
     INDEX idx_status (status),
     INDEX idx_user_id (user_id),
     INDEX idx_created_at (created_at),
+    INDEX idx_is_deleted (is_deleted),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='同步任务工作流表';
 
