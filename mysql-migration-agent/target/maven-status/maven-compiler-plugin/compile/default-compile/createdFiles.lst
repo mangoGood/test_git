@@ -10,7 +10,9 @@ com/migration/agent/service/KafkaConsumerService$1.class
 com/migration/agent/manager/MigrationTaskManager.class
 com/migration/agent/util/ConnectionStringParser.class
 com/migration/agent/service/KafkaConsumerService$TaskHandler.class
+com/migration/agent/service/RecoveryService.class
 com/migration/agent/util/ConnectionStringParser$ConnectionInfo.class
 com/migration/agent/model/TaskStatusMessage.class
 com/migration/agent/manager/ProcessManager.class
 com/migration/agent/thread/MigrationAgentThread.class
+com/migration/agent/model/RecoveryTask.class

@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>实时同步管理</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -357,10 +359,22 @@
             border: 1px solid #ffd591;
         }
 
-        .status-running {
+        .status-starting {
             background-color: #e6f7ff;
             color: #1890ff;
             border: 1px solid #91d5ff;
+        }
+
+        .status-full-migrating {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border: 1px solid #91d5ff;
+        }
+
+        .status-full-completed {
+            background-color: #f6ffed;
+            color: #52c41a;
+            border: 1px solid #b7eb8f;
         }
 
         .status-completed {
@@ -928,14 +942,13 @@
         // 状态映射
         const statusMap = {
             'PENDING': { text: '等待中', class: 'status-pending' },
-            'RUNNING': { text: '运行中', class: 'status-running' },
+            'STARTING': { text: '启动中', class: 'status-starting' },
+            'FULL_MIGRATING': { text: '全量同步中', class: 'status-full-migrating' },
+            'FULL_COMPLETED': { text: '全量同步完成', class: 'status-full-completed' },
+            'INCREMENT_RUNNING': { text: '增量同步中', class: 'status-increment-running', dot: true },
             'COMPLETED': { text: '已完成', class: 'status-completed' },
             'FAILED': { text: '失败', class: 'status-failed' },
-            'PAUSED': { text: '已暂停', class: 'status-paused' },
-            'INCREMENT_RUNNING': { text: '增量同步中', class: 'status-increment-running', dot: true },
-            'FULL_COMPLETED': { text: '全量完成', class: 'status-completed' },
-            'BINLOG_STARTED': { text: 'Binlog启动', class: 'status-running' },
-            'MIGRATION_STARTED': { text: '迁移启动', class: 'status-running' }
+            'PAUSED': { text: '已暂停', class: 'status-paused' }
         };
         
         // 检查登录状态
@@ -960,6 +973,96 @@
             if (user) {
                 document.getElementById('usernameDisplay').textContent = user.username;
             }
+        }
+        
+        // WebSocket 连接
+        let stompClient = null;
+        
+        function connectWebSocket() {
+            const user = getCurrentUser();
+            if (!user) return;
+            
+            const socket = new SockJS('http://localhost:8082/ws');
+            stompClient = Stomp.over(socket);
+            
+            stompClient.connect({}, function(frame) {
+                console.log('WebSocket 连接已建立:', frame);
+                
+                // 订阅全局任务状态更新
+                stompClient.subscribe('/topic/task-status', function(message) {
+                    console.log('收到全局任务状态更新:', message.body);
+                    try {
+                        const data = JSON.parse(message.body);
+                        handleStatusUpdate(data);
+                    } catch (e) {
+                        console.error('解析消息失败:', e);
+                    }
+                });
+                
+                // 订阅用户专属任务状态更新
+                stompClient.subscribe('/user/queue/task-status', function(message) {
+                    console.log('收到用户任务状态更新:', message.body);
+                    try {
+                        const data = JSON.parse(message.body);
+                        handleStatusUpdate(data);
+                    } catch (e) {
+                        console.error('解析消息失败:', e);
+                    }
+                });
+                
+            }, function(error) {
+                console.error('WebSocket 连接错误:', error);
+                // 5秒后重连
+                setTimeout(connectWebSocket, 5000);
+            });
+        }
+        
+        // 处理状态更新
+        function handleStatusUpdate(data) {
+            console.log('处理状态更新:', data);
+            
+            const row = document.querySelector(`.table-row[data-id="${data.taskId}"]`);
+            if (!row) {
+                console.log('未找到对应的任务行:', data.taskId);
+                return;
+            }
+            
+            const statusInfo = statusMap[data.status] || statusMap['PENDING'];
+            const statusCell = row.querySelector('.col-status .status-tag');
+            
+            if (statusCell) {
+                let statusHtml = `<span class="${statusInfo.class}">${statusInfo.text}</span>`;
+                if (statusInfo.dot) {
+                    statusHtml = `<span class="${statusInfo.class}"><span class="status-dot"></span>${statusInfo.text}</span>`;
+                }
+                statusCell.innerHTML = statusHtml;
+            }
+            
+            const progressFill = row.querySelector('.progress-fill');
+            const progressText = row.querySelector('.col-more span');
+            if (progressFill && data.progress !== undefined) {
+                progressFill.style.width = `${data.progress}%`;
+            }
+            if (progressText && data.progress !== undefined) {
+                progressText.textContent = `${data.progress}%`;
+            }
+            
+            const actionCell = row.querySelector('.col-action .action-btns');
+            if (actionCell) {
+                const isRunning = data.status === 'STARTING' || data.status === 'FULL_MIGRATING' || data.status === 'INCREMENT_RUNNING';
+                const isPaused = data.status === 'PAUSED';
+                
+                let actionHtml = '';
+                if (isRunning) {
+                    actionHtml = `<button class="action-btn" onclick="pauseWorkflow('${data.taskId}')">暂停</button>`;
+                } else if (isPaused) {
+                    actionHtml = `<button class="action-btn" onclick="resumeWorkflow('${data.taskId}')">恢复</button>`;
+                }
+                actionHtml += `<button class="action-btn delete" onclick="deleteWorkflow('${data.taskId}')">删除</button>`;
+                actionCell.innerHTML = actionHtml;
+            }
+            
+            showNotification(`任务状态更新: ${statusInfo.text}`, 'success');
         }
         
         // 退出登录
@@ -1158,7 +1261,7 @@
                 </div>
                 <div class="table-cell col-action">
                     <div class="action-btns">
-                        ${(workflow.status === 'RUNNING' || workflow.status === 'INCREMENT_RUNNING') ? 
+                        ${(workflow.status === 'STARTING' || workflow.status === 'FULL_MIGRATING' || workflow.status === 'INCREMENT_RUNNING') ? 
                             `<button class="action-btn" onclick="pauseWorkflow('${workflow.id}')">暂停</button>` : 
                             workflow.status === 'PAUSED' ?
                             `<button class="action-btn" onclick="resumeWorkflow('${workflow.id}')">恢复</button>` :
@@ -1632,6 +1735,7 @@
                 displayUserInfo();
                 updateSortIcons();
                 fetchWorkflows();
+                connectWebSocket();
             }
             
             // 定时刷新任务状态

@@ -67,7 +67,7 @@ public class MigrationTaskManager {
         startOutputThread();
         startProgressMonitor();
         
-        sendStatus("RUNNING", "Migration task started", 0);
+        sendStatus("FULL_MIGRATING", "全量同步中", 0);
         logger.info("Migration task {} started with PID: {}", taskId, getPid());
     }
     
@@ -85,7 +85,7 @@ public class MigrationTaskManager {
                     if (matcher.find()) {
                         int progress = Integer.parseInt(matcher.group(1));
                         saveProgressToDatabase(progress);
-                        sendStatus("RUNNING", "Migration in progress", progress);
+                        sendStatus("FULL_MIGRATING", "全量同步中", progress);
                     }
                 }
             } catch (Exception e) {
@@ -107,7 +107,7 @@ public class MigrationTaskManager {
                     if (exitCode == 0) {
                         logger.info("Migration task {} completed successfully", taskId);
                         saveProgressToDatabase(100);
-                        sendStatus("COMPLETED", "Migration completed successfully", 100);
+                        sendStatus("FULL_COMPLETED", "全量同步完成", 100);
                     } else {
                         logger.error("Migration task {} failed with exit code: {}", taskId, exitCode);
                         sendStatus("FAILED", "Migration failed with exit code: " + exitCode, getProgressFromDatabase());

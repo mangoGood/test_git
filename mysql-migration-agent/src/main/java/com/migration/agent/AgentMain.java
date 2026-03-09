@@ -2,12 +2,14 @@ package com.migration.agent;
 
 import com.migration.agent.manager.MigrationTaskManager;
 import com.migration.agent.manager.ProcessManager;
+import com.migration.agent.model.RecoveryTask;
 import com.migration.agent.model.TaskMessage;
 import com.migration.agent.model.TaskStateInfo;
 import com.migration.agent.model.TaskStatusMessage;
 import com.migration.agent.service.ConfigService;
 import com.migration.agent.service.KafkaConsumerService;
 import com.migration.agent.service.KafkaProducerService;
+import com.migration.agent.service.RecoveryService;
 import com.migration.agent.service.TaskStateService;
 import com.migration.agent.thread.MigrationAgentThread;
 import org.slf4j.Logger;
@@ -18,6 +20,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.*;
@@ -30,6 +33,10 @@ public class AgentMain {
     private static final String METADATA_DB_USER = "sa";
     private static final String METADATA_DB_PASSWORD = "";
     
+    private static final String MYSQL_DB_URL = "jdbc:mysql://192.168.107.2:3306/sync_task_db?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8&allowPublicKeyRetrieval=true";
+    private static final String MYSQL_DB_USER = "root";
+    private static final String MYSQL_DB_PASSWORD = "rootpassword";
+    
     private static final String BINLOG_JAR_PATH = "mysql-migration-binlog/target/mysql-migration-binlog-1.0.0.jar";
     private static final String MIGRATION_FULL_JAR_PATH = "mysql-migration-full/target/mysql-migration-full-1.0.0.jar";
     
@@ -39,6 +46,7 @@ public class AgentMain {
     private KafkaProducerService kafkaProducer;
     private ConfigService configService;
     private TaskStateService taskStateService;
+    private RecoveryService recoveryService;
     private ScheduledExecutorService binlogMonitorExecutor;
     private ExecutorService taskExecutor;
     
@@ -64,6 +72,7 @@ public class AgentMain {
         kafkaProducer = new KafkaProducerService(KAFKA_BOOTSTRAP_SERVERS);
         configService = new ConfigService();
         taskStateService = new TaskStateService();
+        recoveryService = new RecoveryService(MYSQL_DB_URL, MYSQL_DB_USER, MYSQL_DB_PASSWORD);
         
         kafkaConsumer = new KafkaConsumerService(KAFKA_BOOTSTRAP_SERVERS, CONSUMER_GROUP_ID, 
             this::handleTaskMessage);
@@ -83,6 +92,8 @@ public class AgentMain {
         });
         binlogMonitorExecutor.scheduleAtFixedRate(this::monitorBinlogProcesses, 
             BINLOG_MONITOR_INTERVAL, BINLOG_MONITOR_INTERVAL, TimeUnit.MILLISECONDS);
+        
+        recoverUnfinishedTasks();
         
         logger.info("Migration Agent started successfully, waiting for tasks...");
     }
@@ -191,6 +202,15 @@ public class AgentMain {
         try {
             int progress = getProgressFromDatabase(taskId);
             
+            String currentStatus = taskMessage.getCurrentStatus();
+            if (currentStatus == null || currentStatus.isEmpty()) {
+                logger.warn("No currentStatus in message, falling back to MySQL query");
+                RecoveryTask currentTask = recoveryService.getTaskById(taskId);
+                currentStatus = (currentTask != null) ? currentTask.getStatus() : "PAUSED";
+            }
+            
+            logger.info("Task {} current status from message: {}", taskId, currentStatus);
+            
             TaskStateInfo stateInfo = new TaskStateInfo(taskId);
             stateInfo.setTaskName(taskMessage.getTaskName());
             stateInfo.setUserId(taskMessage.getUserId());
@@ -198,11 +218,11 @@ public class AgentMain {
             stateInfo.setSourceConnection(taskMessage.getSourceConnection());
             stateInfo.setTargetConnection(taskMessage.getTargetConnection());
             stateInfo.setCreatedAt(taskMessage.getCreatedAt());
-            stateInfo.setStatus("PAUSED");
+            stateInfo.setStatus(currentStatus);
             stateInfo.setProgress(progress);
             
             taskStateService.saveTaskState(stateInfo);
-            logger.info("Task state saved to H2 metadata database for task: {}", taskId);
+            logger.info("Task state saved to H2 metadata database for task: {}, status: {}", taskId, currentStatus);
             
             stopTaskById(taskId);
             
@@ -225,6 +245,8 @@ public class AgentMain {
         try {
             TaskStateInfo stateInfo = taskStateService.getTaskState(taskId);
             
+            logger.info("=== DEBUG: Task {} stateInfo from H2: {}", taskId, stateInfo != null ? "NOT NULL" : "NULL");
+            
             if (stateInfo == null) {
                 logger.warn("No saved state found in H2 for task: {}, starting fresh", taskId);
                 stateInfo = new TaskStateInfo(taskId);
@@ -232,6 +254,10 @@ public class AgentMain {
                 stateInfo.setSourceConnection(taskMessage.getSourceConnection());
                 stateInfo.setTargetConnection(taskMessage.getTargetConnection());
             }
+            
+            logger.info("=== DEBUG: Task {} migrationMode from H2: {}", taskId, stateInfo.getMigrationMode());
+            logger.info("=== DEBUG: Task {} status from H2: {}", taskId, stateInfo.getStatus());
+            logger.info("=== DEBUG: Task {} progress from H2: {}", taskId, stateInfo.getProgress());
             
             configService.updateConfig(taskMessage);
             logger.info("Config updated for task: {}", taskId);
@@ -245,11 +271,16 @@ public class AgentMain {
             
             String migrationMode = stateInfo.getMigrationMode();
             int progress = stateInfo.getProgress();
+            String savedStatus = stateInfo.getStatus();
             
-            logger.info("Resuming task: {} with mode: {}, progress: {}", taskId, migrationMode, progress);
+            logger.info("Resuming task: {} with mode: {}, progress: {}, status: {}", 
+                taskId, migrationMode, progress, savedStatus);
             
             if ("fullAndIncre".equals(migrationMode)) {
-                MigrationAgentThread agentThread = new MigrationAgentThread(taskMessage, kafkaProducer);
+                boolean skipFullMigration = "FULL_COMPLETED".equals(savedStatus) || 
+                                           "INCREMENT_RUNNING".equals(savedStatus);
+                
+                MigrationAgentThread agentThread = new MigrationAgentThread(taskMessage, kafkaProducer, skipFullMigration);
                 migrationAgentThreads.put(taskId, agentThread);
                 
                 Thread threadWrapper = new Thread(agentThread, "MigrationAgentThread-" + taskId);
@@ -257,11 +288,11 @@ public class AgentMain {
                 migrationAgentThreadWrappers.put(taskId, threadWrapper);
                 threadWrapper.start();
                 
-                logger.info("MigrationAgentThread started for task: {}", taskId);
+                logger.info("MigrationAgentThread started for task: {}, skipFullMigration: {}", taskId, skipFullMigration);
             } else {
                 if (progress < 100) {
                     startMigrationForTask(taskId);
-                    sendStatus(taskId, "RUNNING", "Task resumed, migration in progress", progress);
+                    sendStatus(taskId, "STARTING", "Task resumed, starting migration", progress);
                 } else {
                     sendStatus(taskId, "COMPLETED", "Task completed", progress);
                 }
@@ -339,7 +370,7 @@ public class AgentMain {
             }
             
             if ("fullAndIncre".equals(migrationMode)) {
-                MigrationAgentThread agentThread = new MigrationAgentThread(taskMessage, kafkaProducer);
+                MigrationAgentThread agentThread = new MigrationAgentThread(taskMessage, kafkaProducer, false);
                 migrationAgentThreads.put(taskId, agentThread);
                 
                 Thread threadWrapper = new Thread(agentThread, "MigrationAgentThread-" + taskId);
@@ -450,5 +481,149 @@ public class AgentMain {
         }
         
         return 0;
+    }
+    
+    private void recoverUnfinishedTasks() {
+        logger.info("Starting to recover unfinished tasks...");
+        
+        try {
+            List<RecoveryTask> unfinishedTasks = recoveryService.getUnfinishedTasks();
+            
+            if (unfinishedTasks.isEmpty()) {
+                logger.info("No unfinished tasks found to recover");
+                return;
+            }
+            
+            for (RecoveryTask recoveryTask : unfinishedTasks) {
+                try {
+                    recoverTask(recoveryTask);
+                } catch (Exception e) {
+                    logger.error("Error recovering task: {}", recoveryTask.getTaskId(), e);
+                    sendStatus(recoveryTask.getTaskId(), "FAILED", 
+                        "Failed to recover task: " + e.getMessage(), recoveryTask.getProgress());
+                }
+            }
+            
+            logger.info("Task recovery completed, recovered {} tasks", unfinishedTasks.size());
+            
+        } catch (Exception e) {
+            logger.error("Error during task recovery", e);
+        }
+    }
+    
+    private void recoverTask(RecoveryTask recoveryTask) {
+        String taskId = recoveryTask.getTaskId();
+        String status = recoveryTask.getStatus();
+        String migrationMode = recoveryTask.getMigrationMode();
+        int progress = recoveryTask.getProgress();
+        
+        logger.info("Recovering task: id={}, status={}, mode={}, progress={}", 
+            taskId, status, migrationMode, progress);
+        
+        TaskMessage taskMessage = recoveryTask.toTaskMessage();
+        
+        try {
+            configService.updateConfig(taskMessage);
+            logger.info("Config updated for recovered task: {}", taskId);
+        } catch (Exception e) {
+            logger.error("Error updating config for task: {}", taskId, e);
+            throw new RuntimeException("Failed to update config: " + e.getMessage(), e);
+        }
+        
+        try {
+            Thread.sleep(500);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return;
+        }
+        
+        if ("fullAndIncre".equals(migrationMode)) {
+            recoverFullAndIncreTask(recoveryTask, taskMessage);
+        } else {
+            recoverFullOnlyTask(recoveryTask, taskMessage);
+        }
+    }
+    
+    private void recoverFullAndIncreTask(RecoveryTask recoveryTask, TaskMessage taskMessage) {
+        String taskId = recoveryTask.getTaskId();
+        String status = recoveryTask.getStatus();
+        int progress = recoveryTask.getProgress();
+        
+        switch (status) {
+            case "STARTING":
+                logger.info("Task {} was in STARTING state, restarting from beginning", taskId);
+                startMigrationAgentThread(taskMessage, false);
+                break;
+                
+            case "FULL_MIGRATING":
+                logger.info("Task {} was in FULL_MIGRATING state (progress: {}%), resuming full migration", 
+                    taskId, progress);
+                startMigrationAgentThread(taskMessage, false);
+                break;
+                
+            case "FULL_COMPLETED":
+                logger.info("Task {} was in FULL_COMPLETED state, starting incremental sync", taskId);
+                startMigrationAgentThread(taskMessage, true);
+                break;
+                
+            case "INCREMENT_RUNNING":
+                logger.info("Task {} was in INCREMENT_RUNNING state, resuming incremental sync from checkpoint", taskId);
+                startMigrationAgentThread(taskMessage, true);
+                break;
+                
+            default:
+                logger.warn("Unknown status {} for task {}, restarting from beginning", status, taskId);
+                startMigrationAgentThread(taskMessage, false);
+        }
+    }
+    
+    private void recoverFullOnlyTask(RecoveryTask recoveryTask, TaskMessage taskMessage) {
+        String taskId = recoveryTask.getTaskId();
+        String status = recoveryTask.getStatus();
+        int progress = recoveryTask.getProgress();
+        
+        switch (status) {
+            case "STARTING":
+            case "FULL_MIGRATING":
+                logger.info("Full-only task {} was in {} state (progress: {}%), resuming migration", 
+                    taskId, status, progress);
+                try {
+                    startMigrationForTask(taskId);
+                    sendStatus(taskId, "STARTING", "Task recovered, resuming migration", progress);
+                } catch (Exception e) {
+                    logger.error("Error resuming full migration for task: {}", taskId, e);
+                    sendStatus(taskId, "FAILED", "Failed to resume migration: " + e.getMessage(), progress);
+                }
+                break;
+                
+            case "FULL_COMPLETED":
+                logger.info("Full-only task {} was already completed", taskId);
+                sendStatus(taskId, "COMPLETED", "Task already completed", 100);
+                break;
+                
+            default:
+                logger.warn("Unknown status {} for full-only task {}, treating as new task", status, taskId);
+                try {
+                    startMigrationForTask(taskId);
+                    sendStatus(taskId, "STARTING", "Task recovered, starting migration", 0);
+                } catch (Exception e) {
+                    logger.error("Error starting migration for task: {}", taskId, e);
+                    sendStatus(taskId, "FAILED", "Failed to start migration: " + e.getMessage(), 0);
+                }
+        }
+    }
+    
+    private void startMigrationAgentThread(TaskMessage taskMessage, boolean skipFullMigration) {
+        String taskId = taskMessage.getTaskId();
+        
+        MigrationAgentThread agentThread = new MigrationAgentThread(taskMessage, kafkaProducer, skipFullMigration);
+        migrationAgentThreads.put(taskId, agentThread);
+        
+        Thread threadWrapper = new Thread(agentThread, "MigrationAgentThread-" + taskId);
+        threadWrapper.setDaemon(true);
+        migrationAgentThreadWrappers.put(taskId, threadWrapper);
+        threadWrapper.start();
+        
+        logger.info("MigrationAgentThread started for recovered task: {}, skipFullMigration: {}", taskId, skipFullMigration);
     }
 }

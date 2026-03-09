@@ -16,6 +16,7 @@ public class TaskMessage implements Serializable {
     private String sourceConnection;
     private String targetConnection;
     private LocalDateTime createdAt;
+    private String currentStatus;
 
     public static class DatabaseConfig {
         private String host;
@@ -143,5 +144,13 @@ public class TaskMessage implements Serializable {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getCurrentStatus() {
+        return currentStatus;
+    }
+
+    public void setCurrentStatus(String currentStatus) {
+        this.currentStatus = currentStatus;
     }
 }

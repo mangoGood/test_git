@@ -98,8 +98,8 @@ public class WorkflowService {
     @Transactional
     public void pauseWorkflow(String id, Long userId) {
         Workflow workflow = getWorkflowById(id, userId);
-        workflow.setStatus(WorkflowStatus.PAUSED);
-        workflowRepository.save(workflow);
+        
+        String currentStatus = workflow.getStatus().name();
         
         TaskCreatedMessage message = new TaskCreatedMessage();
         message.setTaskId(workflow.getId());
@@ -110,15 +110,19 @@ public class WorkflowService {
         message.setMigrationMode(workflow.getMigrationMode());
         message.setCreatedAt(workflow.getCreatedAt());
         message.setMessageType("stop");
+        message.setCurrentStatus(currentStatus);
         
         kafkaProducerService.sendControlMessage(message);
-        addLog(workflow.getId(), WorkflowLog.LogLevel.INFO, "任务已暂停，发送停止消息到 Kafka");
+        addLog(workflow.getId(), WorkflowLog.LogLevel.INFO, "任务已暂停，发送停止消息到 Kafka，当前状态: " + currentStatus);
+        
+        workflow.setStatus(WorkflowStatus.PAUSED);
+        workflowRepository.save(workflow);
     }
 
     @Transactional
     public void resumeWorkflow(String id, Long userId) {
         Workflow workflow = getWorkflowById(id, userId);
-        workflow.setStatus(WorkflowStatus.RUNNING);
+        workflow.setStatus(WorkflowStatus.STARTING);
         workflowRepository.save(workflow);
         
         TaskCreatedMessage message = new TaskCreatedMessage();
