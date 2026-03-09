@@ -352,12 +352,10 @@ public class IncrementExecutor {
                     executedCount++;
                     lastPosition = entry.toBinlogPosition();
                     
-                    logger.info("执行 SQL 成功: {}:{}", entry.getFilename(), entry.getPosition());
+                    // 每执行成功一条 SQL 就更新 checkpoint
+                    checkpointManager.saveCheckpoint(lastPosition);
                     
-                    // 每执行 100 条 SQL 更新一次 checkpoint
-                    if (executedCount % 100 == 0) {
-                        checkpointManager.saveCheckpoint(lastPosition);
-                    }
+                    logger.info("执行 SQL 成功: {}:{}, 已更新位点", entry.getFilename(), entry.getPosition());
                     
                 } catch (SQLException e) {
                     logger.error("执行 SQL 失败: {}", entry.getSql(), e);
@@ -368,11 +366,6 @@ public class IncrementExecutor {
                         entry.getFilename(), entry.getPosition());
                 processedEntries.add(entryId);
             }
-        }
-        
-        // 保存最终的 checkpoint
-        if (lastPosition != null) {
-            checkpointManager.saveCheckpoint(lastPosition);
         }
         
         if (executedCount > 0) {

@@ -25,6 +25,7 @@ public class MigrationAgentThread implements Runnable {
     private final String taskId;
     private final AtomicBoolean running;
     private final AtomicBoolean stopped;
+    private final boolean skipFullMigration;
     
     private ProcessManager binlogProcess;
     private ProcessManager fullProcess;
@@ -34,35 +35,54 @@ public class MigrationAgentThread implements Runnable {
     private Thread incrementMonitorThread;
     
     public MigrationAgentThread(TaskMessage taskMessage, KafkaProducerService kafkaProducer) {
+        this(taskMessage, kafkaProducer, false);
+    }
+    
+    public MigrationAgentThread(TaskMessage taskMessage, KafkaProducerService kafkaProducer, boolean skipFullMigration) {
         this.taskMessage = taskMessage;
         this.kafkaProducer = kafkaProducer;
         this.taskId = taskMessage.getTaskId();
         this.running = new AtomicBoolean(true);
         this.stopped = new AtomicBoolean(false);
+        this.skipFullMigration = skipFullMigration;
     }
     
     @Override
     public void run() {
         String threadName = "MigrationAgentThread-" + taskId;
         Thread.currentThread().setName(threadName);
-        logger.info("[{}] 开始执行增量同步任务", threadName);
+        logger.info("[{}] 开始执行增量同步任务, skipFullMigration={}", threadName, skipFullMigration);
         
         try {
-            sendStatus("RUNNING", "开始增量同步任务", 0);
-            
-            if (!startBinlogProcess()) {
-                return;
+            if (skipFullMigration) {
+                sendStatus("INCREMENT_RUNNING", "从增量同步阶段恢复", 100);
+                
+                if (!startBinlogProcess()) {
+                    return;
+                }
+                
+                if (!startIncrementProcess()) {
+                    return;
+                }
+                
+                logger.info("[{}] 增量同步任务恢复完成，进入持续监控模式", threadName);
+            } else {
+                sendStatus("STARTING", "任务启动中", 0);
+                
+                if (!startBinlogProcess()) {
+                    return;
+                }
+                
+                if (!executeFullMigration()) {
+                    return;
+                }
+                
+                if (!startIncrementProcess()) {
+                    return;
+                }
+                
+                logger.info("[{}] 增量同步任务启动完成，进入持续监控模式", threadName);
             }
-            
-            if (!executeFullMigration()) {
-                return;
-            }
-            
-            if (!startIncrementProcess()) {
-                return;
-            }
-            
-            logger.info("[{}] 增量同步任务启动完成，进入持续监控模式", threadName);
             
             while (running.get() && !stopped.get()) {
                 try {
@@ -99,7 +119,7 @@ public class MigrationAgentThread implements Runnable {
                 return false;
             }
             
-            sendStatus("RUNNING", "binlog 监控已启动", 0);
+            logger.info("[{}] binlog 监控进程启动成功", threadName);
             
             binlogMonitorThread = new Thread(() -> {
                 while (running.get() && binlogProcess != null) {
@@ -128,7 +148,6 @@ public class MigrationAgentThread implements Runnable {
             binlogMonitorThread.setDaemon(true);
             binlogMonitorThread.start();
             
-            logger.info("[{}] binlog 监控进程启动成功", threadName);
             return true;
             
         } catch (Exception e) {
@@ -147,13 +166,13 @@ public class MigrationAgentThread implements Runnable {
             fullProcess.setTaskId(taskId);
             fullProcess.start();
             
-            sendStatus("RUNNING", "全量迁移进行中", 0);
+            sendStatus("FULL_MIGRATING", "全量同步中", 0);
             
             int exitCode = fullProcess.waitFor();
             
             if (exitCode == 0) {
                 logger.info("[{}] 全量迁移完成", threadName);
-                sendStatus("FULL_COMPLETED", "全量迁移完成，准备启动增量同步", 100);
+                sendStatus("FULL_COMPLETED", "全量同步完成", 100);
                 return true;
             } else {
                 logger.error("[{}] 全量迁移失败，退出码: {}", threadName, exitCode);

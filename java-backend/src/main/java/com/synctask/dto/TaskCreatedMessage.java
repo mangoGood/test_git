@@ -11,6 +11,7 @@ public class TaskCreatedMessage {
     private String migrationMode;
     private LocalDateTime createdAt;
     private String messageType;
+    private String currentStatus;
 
     public TaskCreatedMessage() {
         this.messageType = "TASK_CREATED";
@@ -78,5 +79,13 @@ public class TaskCreatedMessage {
 
     public void setMessageType(String messageType) {
         this.messageType = messageType;
+    }
+
+    public String getCurrentStatus() {
+        return currentStatus;
+    }
+
+    public void setCurrentStatus(String currentStatus) {
+        this.currentStatus = currentStatus;
     }
 }

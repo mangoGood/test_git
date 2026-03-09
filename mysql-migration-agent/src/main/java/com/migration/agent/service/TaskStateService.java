@@ -113,7 +113,8 @@ public class TaskStateService {
                         }
                     }
                     
-                    logger.info("Task state loaded from H2 database for task: {}", taskId);
+                    logger.info("Task state loaded from H2 database for task: {}, status: {}, migrationMode: {}", 
+                        taskId, stateInfo.getStatus(), stateInfo.getMigrationMode());
                     return stateInfo;
                 }
             }

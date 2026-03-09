@@ -65,6 +65,7 @@ public class SecurityConfig {
                 .requestMatchers("/error").permitAll()
                 .requestMatchers("/", "/login.html", "/admin-dashboard.html").permitAll()
                 .requestMatchers("/*.css", "/*.js", "/*.png", "/*.jpg", "/*.ico").permitAll()
+                .requestMatchers("/ws/**").permitAll()
                 .anyRequest().authenticated()
         );
 

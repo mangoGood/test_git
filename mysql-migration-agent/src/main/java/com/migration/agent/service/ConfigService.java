@@ -11,7 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 public class ConfigService {
-    private static final Logger logger = LoggerFactory.getLogger(ConfigService.class);
+        private static final Logger logger = LoggerFactory.getLogger(ConfigService.class);
     
     public void updateConfig(TaskMessage taskMessage) throws IOException {
         String taskId = taskMessage.getTaskId();

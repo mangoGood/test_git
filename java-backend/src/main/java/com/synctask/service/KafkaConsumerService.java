@@ -121,11 +121,17 @@ public class KafkaConsumerService {
 
     private String buildStatusLogMessage(WorkflowStatus newStatus, WorkflowStatus oldStatus, Integer progress, String errorMessage) {
         switch (newStatus) {
-            case RUNNING:
+            case STARTING:
+                return "任务启动中";
+            case FULL_MIGRATING:
                 if (progress != null && progress > 0) {
-                    return String.format("任务执行中，进度: %d%%", progress);
+                    return String.format("全量同步中，进度: %d%%", progress);
                 }
-                return "任务开始执行";
+                return "全量同步中";
+            case FULL_COMPLETED:
+                return "全量同步完成";
+            case INCREMENT_RUNNING:
+                return "增量同步中";
             case COMPLETED:
                 return "任务执行完成";
             case FAILED:
@@ -134,14 +140,6 @@ public class KafkaConsumerService {
                     : "任务执行失败";
             case PAUSED:
                 return "任务已暂停";
-            case INCREMENT_RUNNING:
-                return "增量同步中";
-            case FULL_COMPLETED:
-                return "全量迁移完成，准备启动增量同步";
-            case BINLOG_STARTED:
-                return "Binlog 监控已启动";
-            case MIGRATION_STARTED:
-                return "迁移任务已启动";
             default:
                 return String.format("任务状态更新为: %s", newStatus.name());
         }
