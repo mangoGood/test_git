@@ -1,5 +1,6 @@
 package com.migration.agent.service;
 
+import com.google.gson.Gson;
 import com.migration.agent.model.TaskMessage;
 import com.migration.agent.util.ConnectionStringParser;
 import com.migration.agent.util.ConnectionStringParser.ConnectionInfo;
@@ -8,10 +9,13 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 public class ConfigService {
         private static final Logger logger = LoggerFactory.getLogger(ConfigService.class);
+    private final Gson gson = new Gson();
     
     public void updateConfig(TaskMessage taskMessage) throws IOException {
         String taskId = taskMessage.getTaskId();
@@ -99,6 +103,52 @@ public class ConfigService {
             props.setProperty("target.db.username", target.getUsername());
             props.setProperty("target.db.password", target.getPassword());
             logger.info("Target database config updated from DatabaseConfig: {}:{}", target.getHost(), target.getPort());
+        }
+        
+        if (taskMessage.getSyncObjects() != null && !taskMessage.getSyncObjects().isEmpty()) {
+            String syncObjectsJson = gson.toJson(taskMessage.getSyncObjects());
+            props.setProperty("migration.sync.objects", syncObjectsJson);
+            logger.info("Sync objects config updated: {}", syncObjectsJson);
+            
+            StringBuilder includedDatabases = new StringBuilder();
+            StringBuilder includedTables = new StringBuilder();
+            
+            for (Map.Entry<String, Map<String, Object>> dbEntry : taskMessage.getSyncObjects().entrySet()) {
+                String dbName = dbEntry.getKey();
+                if (includedDatabases.length() > 0) {
+                    includedDatabases.append(",");
+                }
+                includedDatabases.append(dbName);
+                
+                Map<String, Object> dbValue = dbEntry.getValue();
+                if (dbValue != null && dbValue.containsKey("tables")) {
+                    Object tablesObj = dbValue.get("tables");
+                    if (tablesObj instanceof List) {
+                        @SuppressWarnings("unchecked")
+                        List<String> tables = (List<String>) tablesObj;
+                        for (String table : tables) {
+                            if (includedTables.length() > 0) {
+                                includedTables.append(",");
+                            }
+                            includedTables.append(dbName).append(".").append(table);
+                        }
+                    }
+                }
+            }
+            
+            if (includedDatabases.length() > 0) {
+                props.setProperty("migration.included.databases", includedDatabases.toString());
+                logger.info("Included databases: {}", includedDatabases.toString());
+            }
+            if (includedTables.length() > 0) {
+                props.setProperty("migration.included.tables", includedTables.toString());
+                logger.info("Included tables: {}", includedTables.toString());
+            }
+        }
+        
+        if (taskMessage.getSourceDbName() != null && !taskMessage.getSourceDbName().isEmpty()) {
+            props.setProperty("source.db.name", taskMessage.getSourceDbName());
+            logger.info("Source database name: {}", taskMessage.getSourceDbName());
         }
         
         try (OutputStream output = new FileOutputStream(configFile)) {

@@ -31,6 +31,8 @@ public class WorkflowController {
                     request.getSourceConnection(),
                     request.getTargetConnection(),
                     request.getMigrationMode(),
+                    request.getSyncObjects(),
+                    request.getSourceDbName(),
                     userPrincipal.getId()
             );
             return ResponseEntity.ok(new ApiResponse(true, "任务创建成功", convertToMap(workflow)));
@@ -45,11 +47,13 @@ public class WorkflowController {
             @RequestParam(defaultValue = "10") int pageSize,
             @RequestParam(defaultValue = "created_at") String sortBy,
             @RequestParam(defaultValue = "DESC") String sortDirection,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String status,
             Authentication authentication) {
         try {
             UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
-            Page<Workflow> workflowPage = workflowService.getWorkflowsByUserId(
-                    userPrincipal.getId(), page, pageSize, sortBy, sortDirection
+            Page<Workflow> workflowPage = workflowService.getWorkflowsByUserIdAndFilters(
+                    userPrincipal.getId(), keyword, status, page, pageSize, sortBy, sortDirection
             );
 
             List<Map<String, Object>> list = new ArrayList<>();
@@ -62,6 +66,27 @@ public class WorkflowController {
             response.put("total", workflowPage.getTotalElements());
             response.put("page", page);
             response.put("pageSize", pageSize);
+
+            return ResponseEntity.ok(new ApiResponse(true, "获取成功", response));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ApiResponse(false, e.getMessage()));
+        }
+    }
+    
+    @GetMapping("/failed")
+    public ResponseEntity<?> getFailedWorkflows(Authentication authentication) {
+        try {
+            UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+            List<Workflow> failedWorkflows = workflowService.getFailedWorkflowsByUserId(userPrincipal.getId());
+
+            List<Map<String, Object>> list = new ArrayList<>();
+            for (Workflow workflow : failedWorkflows) {
+                list.add(convertToMap(workflow));
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("list", list);
+            response.put("total", failedWorkflows.size());
 
             return ResponseEntity.ok(new ApiResponse(true, "获取成功", response));
         } catch (Exception e) {
@@ -124,6 +149,19 @@ public class WorkflowController {
         }
     }
 
+    @PostMapping("/{id}/stop")
+    public ResponseEntity<?> stopWorkflow(
+            @PathVariable String id,
+            Authentication authentication) {
+        try {
+            UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+            workflowService.stopWorkflow(id, userPrincipal.getId());
+            return ResponseEntity.ok(new ApiResponse(true, "任务已结束"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ApiResponse(false, e.getMessage()));
+        }
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteWorkflow(
             @PathVariable String id,
@@ -153,6 +191,12 @@ public class WorkflowController {
         map.put("completed_at", workflow.getCompletedAt());
         map.put("error_message", workflow.getErrorMessage());
         map.put("user_id", workflow.getUserId());
+        map.put("total_tables", workflow.getTotalTables());
+        map.put("completed_tables", workflow.getCompletedTables());
+        map.put("current_table", workflow.getCurrentTable());
+        map.put("current_table_progress", workflow.getCurrentTableProgress());
+        map.put("current_table_rows", workflow.getCurrentTableRows());
+        map.put("current_table_total_rows", workflow.getCurrentTableTotalRows());
         return map;
     }
 
@@ -161,6 +205,8 @@ public class WorkflowController {
         private String sourceConnection;
         private String targetConnection;
         private String migrationMode;
+        private String syncObjects;
+        private String sourceDbName;
 
         public String getName() {
             return name;
@@ -192,6 +238,22 @@ public class WorkflowController {
 
         public void setMigrationMode(String migrationMode) {
             this.migrationMode = migrationMode;
+        }
+
+        public String getSyncObjects() {
+            return syncObjects;
+        }
+
+        public void setSyncObjects(String syncObjects) {
+            this.syncObjects = syncObjects;
+        }
+
+        public String getSourceDbName() {
+            return sourceDbName;
+        }
+
+        public void setSourceDbName(String sourceDbName) {
+            this.sourceDbName = sourceDbName;
         }
     }
 

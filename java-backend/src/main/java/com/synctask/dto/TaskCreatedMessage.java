@@ -1,6 +1,7 @@
 package com.synctask.dto;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 public class TaskCreatedMessage {
     private String taskId;
@@ -12,6 +13,8 @@ public class TaskCreatedMessage {
     private LocalDateTime createdAt;
     private String messageType;
     private String currentStatus;
+    private Map<String, Map<String, Object>> syncObjects;
+    private String sourceDbName;
 
     public TaskCreatedMessage() {
         this.messageType = "TASK_CREATED";
@@ -87,5 +90,21 @@ public class TaskCreatedMessage {
 
     public void setCurrentStatus(String currentStatus) {
         this.currentStatus = currentStatus;
+    }
+
+    public Map<String, Map<String, Object>> getSyncObjects() {
+        return syncObjects;
+    }
+
+    public void setSyncObjects(Map<String, Map<String, Object>> syncObjects) {
+        this.syncObjects = syncObjects;
+    }
+
+    public String getSourceDbName() {
+        return sourceDbName;
+    }
+
+    public void setSourceDbName(String sourceDbName) {
+        this.sourceDbName = sourceDbName;
     }
 }

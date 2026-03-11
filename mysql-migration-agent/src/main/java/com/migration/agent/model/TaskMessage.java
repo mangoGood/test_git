@@ -2,6 +2,7 @@ package com.migration.agent.model;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.Map;
 
 public class TaskMessage implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -17,6 +18,8 @@ public class TaskMessage implements Serializable {
     private String targetConnection;
     private LocalDateTime createdAt;
     private String currentStatus;
+    private Map<String, Map<String, Object>> syncObjects;
+    private String sourceDbName;
 
     public static class DatabaseConfig {
         private String host;
@@ -152,5 +155,21 @@ public class TaskMessage implements Serializable {
 
     public void setCurrentStatus(String currentStatus) {
         this.currentStatus = currentStatus;
+    }
+
+    public Map<String, Map<String, Object>> getSyncObjects() {
+        return syncObjects;
+    }
+
+    public void setSyncObjects(Map<String, Map<String, Object>> syncObjects) {
+        this.syncObjects = syncObjects;
+    }
+
+    public String getSourceDbName() {
+        return sourceDbName;
+    }
+
+    public void setSourceDbName(String sourceDbName) {
+        this.sourceDbName = sourceDbName;
     }
 }

@@ -65,18 +65,17 @@ public class ProgressManager {
         MigrationProgress progress = progressDatabase.getProgress(tableName);
         
         if (progress == null) {
-            // 新的迁移任务
             progress = new MigrationProgress(tableName, totalRows);
+            progress.markInProgress();
             progressDatabase.saveProgress(progress);
             logger.info("开始新迁移: {}, 总行数: {}", tableName, totalRows);
         } else if (progress.getStatus().equals("COMPLETED")) {
-            // 已完成的迁移，重置状态
             progress.reset();
             progress.setTotalRows(totalRows);
+            progress.markInProgress();
             progressDatabase.saveProgress(progress);
             logger.info("重新开始迁移: {}, 总行数: {}", tableName, totalRows);
         } else {
-            // 继续之前的迁移
             progress.markInProgress();
             progressDatabase.saveProgress(progress);
             logger.info("继续迁移: {}, 已迁移: {}/{}, 最后ID: {}", 

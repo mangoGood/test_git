@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 数据库元数据读取器
@@ -148,5 +149,36 @@ public class MetadataReader {
         }
         
         return 0;
+    }
+
+    public List<TableInfo> getFilteredTablesInfo(Set<String> includedTables) throws SQLException {
+        List<TableInfo> tablesInfo = new ArrayList<>();
+        List<String> tables = getAllTables();
+        
+        for (String tableName : tables) {
+            if (includedTables != null && !includedTables.isEmpty()) {
+                boolean shouldInclude = false;
+                for (String includedTable : includedTables) {
+                    if (includedTable.equals(tableName) || includedTable.endsWith("." + tableName)) {
+                        shouldInclude = true;
+                        break;
+                    }
+                }
+                if (!shouldInclude) {
+                    logger.debug("表 {} 不在同步对象列表中，跳过", tableName);
+                    continue;
+                }
+            }
+            
+            try {
+                TableInfo tableInfo = getTableInfo(tableName);
+                tablesInfo.add(tableInfo);
+            } catch (SQLException e) {
+                logger.error("获取表 {} 的信息失败", tableName, e);
+                throw e;
+            }
+        }
+        
+        return tablesInfo;
     }
 }

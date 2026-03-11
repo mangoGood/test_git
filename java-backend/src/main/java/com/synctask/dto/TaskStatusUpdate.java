@@ -1,10 +1,30 @@
 package com.synctask.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class TaskStatusUpdate {
     private String taskId;
     private String status;
     private Integer progress;
     private Long userId;
+    
+    @JsonProperty("total_tables")
+    private Integer totalTables;
+    
+    @JsonProperty("completed_tables")
+    private Integer completedTables;
+    
+    @JsonProperty("current_table")
+    private String currentTable;
+    
+    @JsonProperty("current_table_progress")
+    private Integer currentTableProgress;
+    
+    @JsonProperty("current_table_rows")
+    private Long currentTableRows;
+    
+    @JsonProperty("current_table_total_rows")
+    private Long currentTableTotalRows;
 
     public String getTaskId() {
         return taskId;
@@ -36,5 +56,53 @@ public class TaskStatusUpdate {
 
     public void setUserId(Long userId) {
         this.userId = userId;
+    }
+
+    public Integer getTotalTables() {
+        return totalTables;
+    }
+
+    public void setTotalTables(Integer totalTables) {
+        this.totalTables = totalTables;
+    }
+
+    public Integer getCompletedTables() {
+        return completedTables;
+    }
+
+    public void setCompletedTables(Integer completedTables) {
+        this.completedTables = completedTables;
+    }
+
+    public String getCurrentTable() {
+        return currentTable;
+    }
+
+    public void setCurrentTable(String currentTable) {
+        this.currentTable = currentTable;
+    }
+
+    public Integer getCurrentTableProgress() {
+        return currentTableProgress;
+    }
+
+    public void setCurrentTableProgress(Integer currentTableProgress) {
+        this.currentTableProgress = currentTableProgress;
+    }
+
+    public Long getCurrentTableRows() {
+        return currentTableRows;
+    }
+
+    public void setCurrentTableRows(Long currentTableRows) {
+        this.currentTableRows = currentTableRows;
+    }
+
+    public Long getCurrentTableTotalRows() {
+        return currentTableTotalRows;
+    }
+
+    public void setCurrentTableTotalRows(Long currentTableTotalRows) {
+        this.currentTableTotalRows = currentTableTotalRows;
     }
 }

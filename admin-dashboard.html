@@ -203,25 +203,73 @@
         }
 
         .btn-default {
+            padding: 6px 16px;
+            border: 1px solid #d9d9d9;
+            background-color: #fff;
+            border-radius: 4px;
+            cursor: pointer;
             color: #666;
+        }
+        
+        .btn-default:hover {
+            border-color: #40a9ff;
+            color: #40a9ff;
         }
 
         .search-box {
-            flex: 1;
             position: relative;
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 5px 12px 5px 32px;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            min-height: 32px;
+            padding: 2px 12px 2px 32px;
             border: 1px solid #d9d9d9;
             border-radius: 4px;
-            font-size: 13px;
-            outline: none;
+            background-color: #fff;
+            cursor: text;
         }
 
-        .search-input:focus {
+        .search-box:focus-within {
             border-color: #1890ff;
+        }
+
+        .filter-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .filter-tag {
+            display: inline-flex;
+            align-items: center;
+            background-color: #e6f7ff;
+            border: 1px solid #91d5ff;
+            border-radius: 4px;
+            padding: 0 8px;
+            font-size: 12px;
+            height: 22px;
+            color: #1890ff;
+        }
+
+        .filter-tag .tag-remove {
+            margin-left: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .filter-tag .tag-remove:hover {
+            color: #ff4d4f;
+        }
+
+        .search-box .search-input {
+            flex: 1;
+            min-width: 100px;
+            border: none;
+            padding: 0;
+            font-size: 13px;
+            outline: none;
+            background: transparent;
         }
 
         .search-icon {
@@ -231,6 +279,50 @@
             transform: translateY(-50%);
             color: #999;
             font-size: 14px;
+            z-index: 1;
+        }
+
+        .search-box-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        .filter-dropdown, .status-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background-color: #fff;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            z-index: 1000;
+            display: none;
+            min-width: 150px;
+        }
+
+        .filter-dropdown.show, .status-dropdown.show {
+            display: block;
+        }
+
+        .filter-option, .status-option {
+            padding: 8px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .filter-option:hover, .status-option:hover {
+            background-color: #f5f5f5;
+        }
+
+        .filter-icon {
+            font-size: 14px;
+        }
+
+        .status-dropdown {
+            min-width: 120px;
         }
 
         .toolbar-actions {
@@ -365,6 +457,12 @@
             border: 1px solid #91d5ff;
         }
 
+        .status-running {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border: 1px solid #91d5ff;
+        }
+
         .status-full-migrating {
             background-color: #e6f7ff;
             color: #1890ff;
@@ -421,13 +519,18 @@
             background-color: #f5f5f5;
             border-radius: 3px;
             overflow: hidden;
+            display: inline-block;
+            vertical-align: middle;
+            box-sizing: border-box;
         }
 
         .progress-fill {
             height: 100%;
             background-color: #1890ff;
             border-radius: 3px;
-            transition: width 0.3s;
+            transition: width 0.3s ease;
+            display: block;
+            box-sizing: border-box;
         }
 
         /* 操作按钮 */
@@ -454,6 +557,16 @@
         .action-btn.delete:hover {
             border-color: #f5222d;
             color: #f5222d;
+        }
+        
+        .action-btn.stop {
+            border-color: #fa8c16;
+            color: #fa8c16;
+        }
+        
+        .action-btn.stop:hover {
+            border-color: #d46b08;
+            color: #d46b08;
         }
 
         /* 空状态 */
@@ -546,6 +659,8 @@
         .col-checkbox { width: 40px; }
         .col-name { flex: 2; }
         .col-status { flex: 1; }
+        .col-progress { flex: 1; }
+        .col-time { flex: 1; }
         .col-created { flex: 1; }
         .col-monitor { flex: 1; }
         .col-billing { flex: 1; }
@@ -641,6 +756,201 @@
             text-decoration: none;
         }
 
+        /* 步骤导航 */
+        .step-nav {
+            display: flex;
+            margin-bottom: 24px;
+            border-bottom: 1px solid #e8e8e8;
+        }
+
+        .step-item {
+            flex: 1;
+            padding: 12px 16px;
+            text-align: center;
+            font-size: 14px;
+            color: #999;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .step-item.active {
+            color: #1890ff;
+            border-bottom-color: #1890ff;
+        }
+
+        .step-item.completed {
+            color: #52c41a;
+        }
+
+        .step-content {
+            display: none;
+        }
+
+        .step-content.active {
+            display: block;
+        }
+
+        /* 同步对象选择 */
+        .sync-objects-container {
+            display: flex;
+            gap: 16px;
+            min-height: 300px;
+        }
+
+        .sync-objects-panel {
+            flex: 1;
+            border: 1px solid #e8e8e8;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .sync-objects-panel-header {
+            padding: 12px 16px;
+            background-color: #fafafa;
+            border-bottom: 1px solid #e8e8e8;
+            font-size: 13px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .sync-objects-panel-body {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .database-item {
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .database-header {
+            display: flex;
+            align-items: center;
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .database-header:hover {
+            background-color: #f5f5f5;
+        }
+
+        .database-checkbox {
+            width: 16px;
+            height: 16px;
+            margin-right: 8px;
+            cursor: pointer;
+        }
+
+        .database-name {
+            flex: 1;
+            font-size: 13px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .database-expand {
+            font-size: 12px;
+            color: #999;
+            transition: transform 0.2s;
+        }
+
+        .database-expand.expanded {
+            transform: rotate(90deg);
+        }
+
+        .table-list {
+            display: none;
+            padding-left: 24px;
+            background-color: #fafafa;
+        }
+
+        .table-list.show {
+            display: block;
+        }
+
+        .table-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 16px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .table-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        .table-name {
+            flex: 1;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .table-info {
+            font-size: 12px;
+            color: #999;
+            margin-right: 8px;
+        }
+
+        .table-add-btn {
+            padding: 2px 8px;
+            font-size: 12px;
+            border: 1px solid #d9d9d9;
+            background-color: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .table-add-btn:hover {
+            border-color: #1890ff;
+            color: #1890ff;
+        }
+
+        .selected-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 16px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .selected-item:hover {
+            background-color: #f5f5f5;
+        }
+
+        .selected-db-name {
+            font-size: 12px;
+            color: #999;
+            margin-right: 8px;
+        }
+
+        .selected-table-name {
+            flex: 1;
+            font-size: 13px;
+            color: #333;
+        }
+
+        .remove-btn {
+            padding: 2px 8px;
+            font-size: 12px;
+            border: 1px solid #ff4d4f;
+            background-color: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #ff4d4f;
+        }
+
+        .remove-btn:hover {
+            background-color: #fff1f0;
+        }
+
+        .empty-selection {
+            padding: 40px;
+            text-align: center;
+            color: #999;
+            font-size: 13px;
+        }
+
         .modal-footer {
             padding: 16px 24px;
             border-top: 1px solid #e8e8e8;
@@ -668,6 +978,165 @@
 
         .btn-confirm:hover {
             background-color: #40a9ff;
+        }
+        
+        .btn-test {
+            padding: 6px 12px;
+            background-color: #fff;
+            color: #1890ff;
+            border: 1px solid #1890ff;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        
+        .btn-test:hover {
+            background-color: #e6f7ff;
+        }
+        
+        .btn-test:disabled {
+            color: #999;
+            border-color: #d9d9d9;
+            cursor: not-allowed;
+        }
+        
+        .connection-status {
+            margin-top: 4px;
+            font-size: 12px;
+            min-height: 18px;
+        }
+        
+        .connection-status.success {
+            color: #52c41a;
+        }
+        
+        .connection-status.error {
+            color: #f5222d;
+        }
+        
+        .connection-status.testing {
+            color: #1890ff;
+        }
+        
+        .validation-container {
+            min-height: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .validation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e8e8e8;
+        }
+        
+        .validation-header span {
+            font-size: 16px;
+            font-weight: 500;
+        }
+        
+        .validation-result {
+            padding: 8px 0;
+        }
+        
+        .validation-empty {
+            text-align: center;
+            color: #999;
+            padding: 60px 0;
+        }
+        
+        .validation-loading {
+            text-align: center;
+            color: #1890ff;
+            padding: 60px 0;
+        }
+        
+        .check-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            background: #fafafa;
+            border-radius: 4px;
+            border-left: 3px solid #d9d9d9;
+        }
+        
+        .check-item.passed {
+            border-left-color: #52c41a;
+            background: #f6ffed;
+        }
+        
+        .check-item.failed {
+            border-left-color: #f5222d;
+            background: #fff2f0;
+        }
+        
+        .check-item.warning {
+            border-left-color: #faad14;
+            background: #fffbe6;
+        }
+        
+        .check-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+        
+        .check-icon.passed {
+            color: #52c41a;
+        }
+        
+        .check-icon.failed {
+            color: #f5222d;
+        }
+        
+        .check-icon.warning {
+            color: #faad14;
+        }
+        
+        .check-content {
+            flex: 1;
+        }
+        
+        .check-name {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        
+        .check-description {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        
+        .check-message {
+            font-size: 13px;
+        }
+        
+        .validation-summary {
+            margin-top: 16px;
+            padding: 12px 16px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .validation-summary.passed {
+            background: #f6ffed;
+            color: #52c41a;
+        }
+        
+        .validation-summary.failed {
+            background: #fff2f0;
+            color: #f5222d;
         }
 
         /* 通知消息 */
@@ -711,44 +1180,22 @@
                     <div class="menu-title">总览</div>
                 </div>
                 
-                <!-- <div class="menu-section">
-                    <div class="menu-title">迁移旅程</div>
-                    <div class="menu-item">EA Migration Hub</div>
-                </div> -->
-                
                 <div class="menu-section">
                     <div class="menu-title">任务管理</div>
-                    <div class="menu-item active">实时同步管理</div>
-                    <div class="menu-item">实时迁移管理</div>
-                    <div class="menu-item">备份迁移管理</div>
-                    <div class="menu-item">实时灾备管理</div>
-                </div>
-                
-                <div class="menu-section">
-                    <div class="menu-title">录制回放</div>
-                    <div class="menu-item">录制回放管理</div>
-                </div>
-                
-                <div class="menu-section">
-                    <div class="menu-title">应用迁移</div>
-                    <div class="menu-item">数据库和应用迁移</div>
-                </div>
-                
-                <div class="menu-section">
-                    <div class="menu-title">数据订阅</div>
-                    <div class="menu-item">数据订阅管理</div>
+                    <div class="menu-item active" onclick="switchPage('sync')">实时同步管理</div>
                 </div>
                 
                 <div class="menu-section">
                     <div class="menu-title">其他</div>
-                    <div class="menu-item">校验任务管理</div>
-                    <div class="menu-item">连接信息管理</div>
+                    <div class="menu-item" onclick="switchPage('validation')">校验任务管理</div>
                 </div>
             </nav>
         </aside>
 
         <!-- 主内容区 -->
         <main class="main-content">
+            <!-- 同步任务页面 -->
+            <div id="syncPage">
             <!-- 顶部栏 -->
             <header class="header">
                 <div class="header-left">
@@ -779,20 +1226,42 @@
                             批量操作
                             <span>▼</span>
                         </button>
-                        <button class="btn btn-default">查看异常任务</button>
+                        <button class="btn btn-default" id="viewFailedTasksBtn">查看异常任务</button>
                         <button class="btn btn-default">批量导入任务</button>
                         <button class="btn btn-default">导出</button>
                         <button class="btn btn-default">导出创建模板</button>
                         <button class="btn btn-default">下载创建模板</button>
                     </div>
                     <div class="toolbar-row">
-                        <div class="search-box">
-                            <span class="search-icon">🔍</span>
-                            <input type="text" class="search-input" placeholder="添加筛选条件">
+                        <div class="search-box-wrapper">
+                            <div class="search-box" id="searchBox">
+                                <span class="search-icon">🔍</span>
+                                <div class="filter-tags" id="filterTags"></div>
+                                <input type="text" class="search-input" id="searchInput" placeholder="添加筛选条件">
+                            </div>
+                            <div class="filter-dropdown" id="filterDropdown">
+                                <div class="filter-option" data-filter="keyword">
+                                    <span class="filter-icon">📝</span>
+                                    <span>任务名称/ID</span>
+                                </div>
+                                <div class="filter-option" data-filter="status">
+                                    <span class="filter-icon">📊</span>
+                                    <span>状态</span>
+                                </div>
+                            </div>
+                            <div class="status-dropdown" id="statusDropdown">
+                                <div class="status-option" data-status="PENDING">创建中</div>
+                                <div class="status-option" data-status="STARTING">启动中</div>
+                                <div class="status-option" data-status="FULL_MIGRATING">全量同步中</div>
+                                <div class="status-option" data-status="FULL_COMPLETED">全量完成</div>
+                                <div class="status-option" data-status="INCREMENT_RUNNING">增量同步中</div>
+                                <div class="status-option" data-status="COMPLETED">已完成</div>
+                                <div class="status-option" data-status="FAILED">失败</div>
+                                <div class="status-option" data-status="PAUSED">已暂停</div>
+                            </div>
                         </div>
                         <div class="toolbar-actions">
                             <button class="icon-btn" id="refreshBtn" title="刷新">↻</button>
-                            <button class="icon-btn" title="设置">⚙</button>
                         </div>
                     </div>
                 </div>
@@ -859,46 +1328,205 @@
                     </div>
                 </div>
             </div>
+            </div>
+            
+            <!-- 校验任务页面 -->
+            <div id="validationPage" style="display: none;">
+                <header class="header">
+                    <div class="header-left">
+                        <h1 class="header-title">校验任务管理</h1>
+                    </div>
+                    <div class="header-right">
+                        <button class="btn-confirm" onclick="openCreateValidationModal()">创建校验任务</button>
+                    </div>
+                </header>
+                
+                <div class="content-card">
+                    <div class="table-container">
+                        <div class="table-header">
+                            <div class="table-cell col-name">任务名称</div>
+                            <div class="table-cell col-status">状态</div>
+                            <div class="table-cell col-progress">校验进度</div>
+                            <div class="table-cell col-time">创建时间</div>
+                            <div class="table-cell col-action">操作</div>
+                        </div>
+                        <div id="validationTaskList">
+                            <div class="empty-state">
+                                <div class="empty-icon">
+                                    <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <rect x="15" y="25" width="50" height="40" rx="2" stroke="#d9d9d9" stroke-width="2" fill="none"/>
+                                        <rect x="20" y="20" width="40" height="8" rx="1" stroke="#d9d9d9" stroke-width="2" fill="none"/>
+                                        <line x1="25" y1="45" x2="55" y2="45" stroke="#d9d9d9" stroke-width="2"/>
+                                        <line x1="25" y1="52" x2="45" y2="52" stroke="#d9d9d9" stroke-width="2"/>
+                                    </svg>
+                                </div>
+                                <div class="empty-text">暂无校验任务</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="pagination" id="validationPagination">
+                        <div class="pagination-info" id="validationPaginationInfo">总条数：0</div>
+                        <div class="pagination-controls" id="validationPaginationControls">
+                            <select class="page-size" id="validationPageSizeSelect">
+                                <option value="10" selected>10条/页</option>
+                                <option value="20">20条/页</option>
+                                <option value="50">50条/页</option>
+                            </select>
+                            <button class="page-btn" id="validationPrevPageBtn" onclick="goToValidationPage(validationCurrentPage - 1)">‹</button>
+                            <div id="validationPageNumbers"></div>
+                            <button class="page-btn" id="validationNextPageBtn" onclick="goToValidationPage(validationCurrentPage + 1)">›</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
     <!-- 创建任务模态框 -->
     <div class="modal" id="createTaskModal">
-        <div class="modal-content">
+        <div class="modal-content" style="width: 800px;">
             <div class="modal-header">
                 <h3 class="modal-title">创建同步任务</h3>
                 <span class="modal-close" id="closeModal">&times;</span>
             </div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label class="form-label">任务名称</label>
-                    <input type="text" class="form-input" id="taskName" placeholder="请输入任务名称">
+                <!-- 步骤导航 -->
+                <div class="step-nav">
+                    <div class="step-item active" id="step1Nav" onclick="goToStep(1)">
+                        <span>1. 填写连接信息</span>
+                    </div>
+                    <div class="step-item" id="step2Nav" onclick="goToStep(2)">
+                        <span>2. 选择同步对象</span>
+                    </div>
+                    <div class="step-item" id="step3Nav" onclick="goToStep(3)">
+                        <span>3. 校验检查</span>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">源数据库连接</label>
-                    <input type="text" class="form-input" id="sourceConnection" placeholder="例如：mysql://user:pass@host:port/db" oninput="validateConnectionInput(this, 'source')">
+                
+                <!-- 步骤1: 填写连接信息 -->
+                <div class="step-content active" id="step1Content">
+                    <div class="form-group">
+                        <label class="form-label">任务名称</label>
+                        <input type="text" class="form-input" id="taskName" placeholder="请输入任务名称">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">源数据库连接</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" class="form-input" id="sourceConnection" placeholder="例如：mysql://user:pass@host:port/db" oninput="validateConnectionInput(this, 'source')" style="flex: 1;">
+                            <button type="button" class="btn-test" id="testSourceBtn" onclick="testConnection('source')">测试连接</button>
+                        </div>
+                        <div id="sourceConnectionStatus" class="connection-status"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">目标数据库连接</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" class="form-input" id="targetConnection" placeholder="例如：mysql://user:pass@host:port/db" oninput="validateConnectionInput(this, 'target')" style="flex: 1;">
+                            <button type="button" class="btn-test" id="testTargetBtn" onclick="testConnection('target')">测试连接</button>
+                        </div>
+                        <div id="targetConnectionStatus" class="connection-status"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">同步模式</label>
+                        <div style="display: flex; gap: 16px; margin-top: 8px;">
+                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                <input type="radio" name="migrationMode" value="full" id="modeFull" checked>
+                                <span>全量同步任务</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                <input type="radio" name="migrationMode" value="fullAndIncre" id="modeFullAndIncre">
+                                <span>增量同步任务</span>
+                            </label>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">目标数据库连接</label>
-                    <input type="text" class="form-input" id="targetConnection" placeholder="例如：mysql://user:pass@host:port/db" oninput="validateConnectionInput(this, 'target')">
+                
+                <!-- 步骤2: 选择同步对象 -->
+                <div class="step-content" id="step2Content">
+                    <div class="sync-objects-container">
+                        <!-- 左侧: 源数据库对象列表 -->
+                        <div class="sync-objects-panel">
+                            <div class="sync-objects-panel-header">
+                                源数据库对象列表
+                            </div>
+                            <div class="sync-objects-panel-body" id="sourceObjectsList">
+                                <div class="empty-selection">请先填写源数据库连接并点击"下一步"</div>
+                            </div>
+                        </div>
+                        
+                        <!-- 右侧: 已选择的同步对象 -->
+                        <div class="sync-objects-panel">
+                            <div class="sync-objects-panel-header">
+                                已选择的同步对象
+                            </div>
+                            <div class="sync-objects-panel-body" id="selectedObjectsList">
+                                <div class="empty-selection" id="emptySelection">暂未选择任何对象</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">同步模式</label>
-                    <div style="display: flex; gap: 16px; margin-top: 8px;">
-                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                            <input type="radio" name="migrationMode" value="full" id="modeFull" checked>
-                            <span>全量同步任务</span>
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                            <input type="radio" name="migrationMode" value="fullAndIncre" id="modeFullAndIncre">
-                            <span>增量同步任务</span>
-                        </label>
+                
+                <!-- 步骤3: 校验检查 -->
+                <div class="step-content" id="step3Content">
+                    <div class="validation-container">
+                        <div class="validation-header">
+                            <span>数据库同步前校验</span>
+                            <button type="button" class="btn-test" id="runValidationBtn" onclick="runValidation()">开始校验</button>
+                        </div>
+                        <div class="validation-result" id="validationResult">
+                            <div class="validation-empty">请点击"开始校验"按钮进行数据库同步条件检查</div>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
                 <button class="btn-cancel" id="cancelBtn">取消</button>
-                <button class="btn-confirm" id="confirmBtn">创建</button>
+                <button class="btn-default" id="prevBtn" style="display: none;" onclick="goToStep(currentStep - 1)">上一步</button>
+                <button class="btn-confirm" id="nextBtn" onclick="nextStep()">下一步</button>
+                <button class="btn-confirm" id="confirmBtn" style="display: none;" onclick="createTask()">创建任务</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 创建校验任务模态框 -->
+    <div class="modal" id="createValidationModal">
+        <div class="modal-content" style="width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title">创建校验任务</h3>
+                <span class="modal-close" id="closeValidationModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">选择增量同步任务</label>
+                    <select class="form-input" id="validationWorkflowSelect" style="height: 38px;">
+                        <option value="">请选择增量同步中的任务</option>
+                    </select>
+                </div>
+                <div id="validationWorkflowInfo" style="display: none; margin-top: 12px; padding: 12px; background: #f5f5f5; border-radius: 4px;">
+                    <div style="font-size: 13px; color: #666;">
+                        <div>任务名称：<span id="validationSelectedName"></span></div>
+                        <div style="margin-top: 4px;">状态：<span id="validationSelectedStatus"></span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" id="cancelValidationBtn">取消</button>
+                <button class="btn-confirm" id="confirmValidationBtn" onclick="createValidationTask()">创建</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 校验任务详情模态框 -->
+    <div class="modal" id="validationDetailModal">
+        <div class="modal-content" style="width: 600px;">
+            <div class="modal-header">
+                <h3 class="modal-title">校验任务详情</h3>
+                <span class="modal-close" id="closeValidationDetailModal">&times;</span>
+            </div>
+            <div class="modal-body" id="validationDetailBody">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" id="closeValidationDetailBtn">关闭</button>
             </div>
         </div>
     </div>
@@ -933,11 +1561,24 @@
         // 当前页码
         let currentPage = 1;
         let pageSize = 10;
-        let totalCount = 0; // 总条数
+        let totalCount = 0;
         
-        // 排序相关
-        let sortField = 'created_at'; // 默认按创建时间排序
-        let sortDirection = 'DESC'; // 默认降序（从近到远）
+        let sortField = 'created_at';
+        let sortDirection = 'DESC';
+        
+        let currentStep = 1;
+        
+        let filterKeyword = null;
+        let filterStatus = null;
+        let activeFilterType = null;
+        let isViewingFailedTasks = false;
+        
+        // 已选择的同步对象
+        let selectedSyncObjects = {};
+        
+        // 数据库缓存
+        let databasesCache = [];
+        let tablesCache = {};
         
         // 状态映射
         const statusMap = {
@@ -1038,27 +1679,55 @@
                 statusCell.innerHTML = statusHtml;
             }
             
-            const progressFill = row.querySelector('.progress-fill');
-            const progressText = row.querySelector('.col-more span');
-            if (progressFill && data.progress !== undefined) {
-                progressFill.style.width = `${data.progress}%`;
-            }
-            if (progressText && data.progress !== undefined) {
-                progressText.textContent = `${data.progress}%`;
+            const progressCell = row.querySelector('.col-more');
+            if (progressCell) {
+                let progressHtml = `
+                    <div style="display: flex; align-items: center; width: 100%;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${data.progress || 0}%"></div>
+                        </div>
+                        <span style="margin-left: 8px; font-size: 11px; color: #666; white-space: nowrap;">${data.progress || 0}%</span>
+                    </div>
+                `;
+                
+                const totalTables = data.total_tables !== undefined ? data.total_tables : data.totalTables;
+                const completedTables = data.completed_tables !== undefined ? data.completed_tables : data.completedTables;
+                const currentTable = data.current_table !== undefined ? data.current_table : data.currentTable;
+                const currentTableProgress = data.current_table_progress !== undefined ? data.current_table_progress : data.currentTableProgress;
+                
+                if (data.status === 'FULL_MIGRATING' && totalTables !== undefined && totalTables !== null) {
+                    progressHtml += `
+                        <div style="margin-top: 4px; font-size: 10px; color: #999;">
+                            表: ${completedTables || 0}/${totalTables}
+                            ${currentTable ? `<br>当前: ${currentTable} (${currentTableProgress || 0}%)` : ''}
+                        </div>
+                    `;
+                }
+                
+                progressCell.innerHTML = progressHtml;
             }
             
             const actionCell = row.querySelector('.col-action .action-btns');
             if (actionCell) {
-                const isRunning = data.status === 'STARTING' || data.status === 'FULL_MIGRATING' || data.status === 'INCREMENT_RUNNING';
+                const isStarting = data.status === 'STARTING' || data.status === 'FULL_MIGRATING';
+                const isIncrementRunning = data.status === 'INCREMENT_RUNNING';
                 const isPaused = data.status === 'PAUSED';
+                const isCompleted = data.status === 'COMPLETED' || data.status === 'FAILED' || data.status === 'FULL_COMPLETED';
                 
                 let actionHtml = '';
-                if (isRunning) {
+                if (isStarting) {
                     actionHtml = `<button class="action-btn" onclick="pauseWorkflow('${data.taskId}')">暂停</button>`;
+                    if (data.status === 'FULL_MIGRATING') {
+                        actionHtml += `<button class="action-btn stop" onclick="stopWorkflow('${data.taskId}')">结束</button>`;
+                    }
+                } else if (isIncrementRunning) {
+                    actionHtml = `<button class="action-btn" onclick="pauseWorkflow('${data.taskId}')">暂停</button><button class="action-btn stop" onclick="stopWorkflow('${data.taskId}')">结束</button>`;
                 } else if (isPaused) {
                     actionHtml = `<button class="action-btn" onclick="resumeWorkflow('${data.taskId}')">恢复</button>`;
                 }
-                actionHtml += `<button class="action-btn delete" onclick="deleteWorkflow('${data.taskId}')">删除</button>`;
+                if (isCompleted) {
+                    actionHtml += `<button class="action-btn delete" onclick="deleteWorkflow('${data.taskId}')">删除</button>`;
+                }
                 actionCell.innerHTML = actionHtml;
             }
             
@@ -1116,7 +1785,6 @@
             return `${formatted} (${offsetStr})`;
         }
         
-        // 获取任务列表
         async function fetchWorkflows() {
             if (!checkAuth()) return;
             
@@ -1125,15 +1793,20 @@
                 const userId = user ? user.id : null;
                 let url = `${API_BASE_URL}/workflows?page=${currentPage}&pageSize=${pageSize}${userId ? `&userId=${userId}` : ''}`;
                 
-                // 添加排序参数
                 url += `&sortBy=${sortField}&sortDirection=${sortDirection}`;
+                
+                if (filterKeyword) {
+                    url += `&keyword=${encodeURIComponent(filterKeyword)}`;
+                }
+                if (filterStatus) {
+                    url += `&status=${filterStatus}`;
+                }
                 
                 const response = await fetch(url, {
                     headers: getAuthHeaders()
                 });
                 
                 if (response.status === 401) {
-                    // Token 过期或无效，跳转到登录页
                     logout();
                     return;
                 }
@@ -1151,6 +1824,36 @@
             } catch (error) {
                 console.error('获取任务列表失败:', error);
                 showNotification('获取任务列表失败', 'error');
+            }
+        }
+        
+        async function fetchFailedWorkflows() {
+            if (!checkAuth()) return;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/workflows/failed`, {
+                    headers: getAuthHeaders()
+                });
+                
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    isViewingFailedTasks = true;
+                    totalCount = result.data.total;
+                    renderTable(result.data.list);
+                    updatePagination(result.data.total);
+                    
+                    document.getElementById('viewFailedTasksBtn').textContent = '查看全部任务';
+                    showNotification(`共找到 ${result.data.total} 个异常任务`, 'info');
+                }
+            } catch (error) {
+                console.error('获取异常任务失败:', error);
+                showNotification('获取异常任务失败', 'error');
             }
         }
         
@@ -1254,19 +1957,29 @@
                     ${workflow.is_billing ? '<span style="color: #52c41a;">是</span>' : '<span style="color: #999;">否</span>'}
                 </div>
                 <div class="table-cell col-more">
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${workflow.progress || 0}%"></div>
+                    <div style="display: flex; align-items: center; width: 100%;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${workflow.progress || 0}%"></div>
+                        </div>
+                        <span style="margin-left: 8px; font-size: 11px; color: #666; white-space: nowrap;">${workflow.progress || 0}%</span>
                     </div>
-                    <span style="margin-left: 8px; font-size: 11px; color: #666;">${workflow.progress || 0}%</span>
+                    ${workflow.status === 'FULL_MIGRATING' && workflow.total_tables ? 
+                        `<div style="margin-top: 4px; font-size: 10px; color: #999;">
+                            表: ${workflow.completed_tables || 0}/${workflow.total_tables}
+                            ${workflow.current_table ? `<br>当前: ${workflow.current_table} (${workflow.current_table_progress || 0}%)` : ''}
+                        </div>` : ''}
                 </div>
                 <div class="table-cell col-action">
                     <div class="action-btns">
-                        ${(workflow.status === 'STARTING' || workflow.status === 'FULL_MIGRATING' || workflow.status === 'INCREMENT_RUNNING') ? 
-                            `<button class="action-btn" onclick="pauseWorkflow('${workflow.id}')">暂停</button>` : 
+                        ${(workflow.status === 'STARTING' || workflow.status === 'FULL_MIGRATING') ? 
+                            `<button class="action-btn" onclick="pauseWorkflow('${workflow.id}')">暂停</button>${workflow.status === 'FULL_MIGRATING' ? `<button class="action-btn stop" onclick="stopWorkflow('${workflow.id}')">结束</button>` : ''}` : 
+                            workflow.status === 'INCREMENT_RUNNING' ?
+                            `<button class="action-btn" onclick="pauseWorkflow('${workflow.id}')">暂停</button><button class="action-btn stop" onclick="stopWorkflow('${workflow.id}')">结束</button>` :
                             workflow.status === 'PAUSED' ?
                             `<button class="action-btn" onclick="resumeWorkflow('${workflow.id}')">恢复</button>` :
                             ''}
-                        <button class="action-btn delete" onclick="deleteWorkflow('${workflow.id}')">删除</button>
+                        ${(workflow.status === 'COMPLETED' || workflow.status === 'FAILED' || workflow.status === 'FULL_COMPLETED') ? 
+                            `<button class="action-btn delete" onclick="deleteWorkflow('${workflow.id}')">删除</button>` : ''}
                     </div>
                 </div>
             `;
@@ -1357,6 +2070,59 @@
         
         let isSubmitting = false;
         
+        let connectionTestStatus = {
+            source: null,
+            target: null
+        };
+        
+        function testConnection(type) {
+            const connectionInput = document.getElementById(type === 'source' ? 'sourceConnection' : 'targetConnection');
+            const statusDiv = document.getElementById(type + 'ConnectionStatus');
+            const testBtn = document.getElementById('test' + (type === 'source' ? 'Source' : 'Target') + 'Btn');
+            const connection = connectionInput.value.trim();
+            
+            if (!connection) {
+                showNotification('请先填写' + (type === 'source' ? '源' : '目标') + '数据库连接', 'error');
+                return;
+            }
+            
+            const error = validateConnectionString(connection);
+            if (error) {
+                showNotification('连接串格式不正确', 'error');
+                return;
+            }
+            
+            statusDiv.className = 'connection-status testing';
+            statusDiv.textContent = '正在测试连接...';
+            testBtn.disabled = true;
+            
+            fetch(`${API_BASE_URL}/metadata/test-connection`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ sourceConnection: connection })
+            })
+            .then(response => response.json())
+            .then(result => {
+                testBtn.disabled = false;
+                if (result.success && result.data && result.data.connected) {
+                    statusDiv.className = 'connection-status success';
+                    statusDiv.textContent = '✓ 连接成功';
+                    connectionTestStatus[type] = true;
+                    connectionInput.classList.remove('error');
+                } else {
+                    statusDiv.className = 'connection-status error';
+                    statusDiv.textContent = '✗ 连接失败: ' + (result.message || '无法连接到数据库');
+                    connectionTestStatus[type] = false;
+                }
+            })
+            .catch(error => {
+                testBtn.disabled = false;
+                statusDiv.className = 'connection-status error';
+                statusDiv.textContent = '✗ 连接测试出错: ' + error.message;
+                connectionTestStatus[type] = false;
+            });
+        }
+        
         // 验证数据库连接串格式
         function validateConnectionString(connectionString) {
             if (!connectionString) {
@@ -1375,6 +2141,11 @@
             const value = input.value.trim();
             const fieldName = type === 'source' ? '源数据库连接' : '目标数据库连接';
             
+            connectionTestStatus[type] = null;
+            const statusDiv = document.getElementById(type + 'ConnectionStatus');
+            statusDiv.className = 'connection-status';
+            statusDiv.textContent = '';
+            
             if (!value) {
                 input.classList.remove('error');
                 input.placeholder = `例如：mysql://user:pass@host:port/db`;
@@ -1391,6 +2162,341 @@
             }
         }
         
+        // 步骤导航
+        function goToStep(step) {
+            if (step === 2 && currentStep === 1) {
+                const sourceConnection = document.getElementById('sourceConnection').value.trim();
+                const sourceInput = document.getElementById('sourceConnection');
+                
+                if (!sourceConnection) {
+                    showNotification('请填写源数据库连接', 'error');
+                    return;
+                }
+                
+                if (sourceInput.classList.contains('error')) {
+                    showNotification('源数据库连接串格式不正确', 'error');
+                    return;
+                }
+                
+                if (!connectionTestStatus.source) {
+                    showNotification('请先测试源数据库连接', 'error');
+                    return;
+                }
+                
+                loadDatabases(sourceConnection);
+            }
+            
+            if (step === 3 && currentStep === 2) {
+                if (Object.keys(selectedSyncObjects).length === 0) {
+                    showNotification('请至少选择一个同步对象', 'error');
+                    return;
+                }
+            }
+            
+            currentStep = step;
+            updateStepUI();
+        }
+        
+        function nextStep() {
+            if (currentStep === 1) {
+                goToStep(2);
+            } else if (currentStep === 2) {
+                goToStep(3);
+            }
+        }
+        
+        function updateStepUI() {
+            document.getElementById('step1Nav').className = 'step-item' + (currentStep === 1 ? ' active' : (currentStep > 1 ? ' completed' : ''));
+            document.getElementById('step2Nav').className = 'step-item' + (currentStep === 2 ? ' active' : (currentStep > 2 ? ' completed' : ''));
+            document.getElementById('step3Nav').className = 'step-item' + (currentStep === 3 ? ' active' : '');
+            
+            document.getElementById('step1Content').className = 'step-content' + (currentStep === 1 ? ' active' : '');
+            document.getElementById('step2Content').className = 'step-content' + (currentStep === 2 ? ' active' : '');
+            document.getElementById('step3Content').className = 'step-content' + (currentStep === 3 ? ' active' : '');
+            
+            document.getElementById('nextBtn').style.display = (currentStep === 1 || currentStep === 2) ? 'inline-block' : 'none';
+            document.getElementById('prevBtn').style.display = (currentStep === 2 || currentStep === 3) ? 'inline-block' : 'none';
+            document.getElementById('confirmBtn').style.display = currentStep === 3 ? 'inline-block' : 'none';
+        }
+        
+        let validationPassed = false;
+        
+        async function runValidation() {
+            const sourceConnection = document.getElementById('sourceConnection').value.trim();
+            const targetConnection = document.getElementById('targetConnection').value.trim();
+            const modeFull = document.getElementById('modeFull');
+            const migrationMode = modeFull.checked ? 'full' : 'fullAndIncre';
+            
+            const resultDiv = document.getElementById('validationResult');
+            const runBtn = document.getElementById('runValidationBtn');
+            
+            resultDiv.innerHTML = '<div class="validation-loading">正在校验中，请稍候...</div>';
+            runBtn.disabled = true;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/metadata/validate`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        sourceConnection: sourceConnection,
+                        targetConnection: targetConnection,
+                        migrationMode: migrationMode
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success && result.data) {
+                    renderValidationResult(result.data);
+                } else {
+                    resultDiv.innerHTML = `<div class="validation-empty" style="color: #f5222d;">校验失败: ${result.message || '未知错误'}</div>`;
+                    validationPassed = false;
+                }
+            } catch (error) {
+                console.error('校验失败:', error);
+                resultDiv.innerHTML = `<div class="validation-empty" style="color: #f5222d;">校验请求失败: ${error.message}</div>`;
+                validationPassed = false;
+            } finally {
+                runBtn.disabled = false;
+            }
+        }
+        
+        function renderValidationResult(data) {
+            const resultDiv = document.getElementById('validationResult');
+            let html = '';
+            
+            if (data.checkItems && data.checkItems.length > 0) {
+                data.checkItems.forEach(item => {
+                    const statusClass = item.passed ? 'passed' : (item.severity === 'warning' ? 'warning' : 'failed');
+                    const icon = item.passed ? '✓' : (item.severity === 'warning' ? '⚠' : '✗');
+                    
+                    html += `
+                        <div class="check-item ${statusClass}">
+                            <div class="check-icon ${statusClass}">${icon}</div>
+                            <div class="check-content">
+                                <div class="check-name">${item.name}</div>
+                                <div class="check-description">${item.description}</div>
+                                <div class="check-message">${item.message}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            const summaryClass = data.allPassed ? 'passed' : 'failed';
+            const summaryText = data.allPassed ? '✓ 所有检查项均已通过，可以创建任务' : '✗ 存在未通过的检查项，请修复后再创建任务';
+            html += `<div class="validation-summary ${summaryClass}">${summaryText}</div>`;
+            
+            resultDiv.innerHTML = html;
+            validationPassed = data.allPassed;
+        }
+        
+        // 加载数据库列表
+        async function loadDatabases(connectionStr) {
+            const sourceList = document.getElementById('sourceObjectsList');
+            sourceList.innerHTML = '<div class="empty-selection">加载中...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/metadata/databases`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ sourceConnection: connectionStr })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success && result.data.databases) {
+                    databasesCache = result.data.databases;
+                    renderDatabases();
+                } else {
+                    sourceList.innerHTML = `<div class="empty-selection" style="color: #f5222d;">${result.message || '加载失败'}</div>`;
+                }
+            } catch (error) {
+                console.error('加载数据库列表失败:', error);
+                sourceList.innerHTML = '<div class="empty-selection" style="color: #f5222d;">加载失败，请检查连接串</div>';
+            }
+        }
+        
+        // 渲染数据库列表
+        function renderDatabases() {
+            const sourceList = document.getElementById('sourceObjectsList');
+            
+            if (databasesCache.length === 0) {
+                sourceList.innerHTML = '<div class="empty-selection">未找到可访问的数据库</div>';
+                return;
+            }
+            
+            let html = '';
+            databasesCache.forEach(db => {
+                html += `
+                    <div class="database-item" data-db="${db}">
+                        <div class="database-header" onclick="toggleDatabase('${db}')">
+                            <input type="checkbox" class="database-checkbox" onclick="event.stopPropagation(); selectAllTables('${db}', this.checked)">
+                            <span class="database-name">${db}</span>
+                            <span class="database-expand" id="expand-${db}">▶</span>
+                        </div>
+                        <div class="table-list" id="tables-${db}">
+                            <div style="padding: 16px; color: #999; font-size: 12px;">加载中...</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            sourceList.innerHTML = html;
+        }
+        
+        // 展开/折叠数据库
+        async function toggleDatabase(db) {
+            const tableList = document.getElementById(`tables-${db}`);
+            const expandIcon = document.getElementById(`expand-${db}`);
+            
+            if (tableList.classList.contains('show')) {
+                tableList.classList.remove('show');
+                expandIcon.classList.remove('expanded');
+            } else {
+                tableList.classList.add('show');
+                expandIcon.classList.add('expanded');
+                
+                // 加载表列表
+                if (!tablesCache[db]) {
+                    await loadTables(db);
+                }
+            }
+        }
+        
+        // 加载表列表
+        async function loadTables(db) {
+            const connectionStr = document.getElementById('sourceConnection').value.trim();
+            const tableList = document.getElementById(`tables-${db}`);
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/metadata/tables`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ sourceConnection: connectionStr, database: db })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success && result.data.tables) {
+                    tablesCache[db] = result.data.tables;
+                    renderTables(db);
+                } else {
+                    tableList.innerHTML = `<div style="padding: 16px; color: #f5222d; font-size: 12px;">${result.message || '加载失败'}</div>`;
+                }
+            } catch (error) {
+                console.error('加载表列表失败:', error);
+                tableList.innerHTML = '<div style="padding: 16px; color: #f5222d; font-size: 12px;">加载失败</div>';
+            }
+        }
+        
+        // 渲染表列表
+        function renderTables(db) {
+            const tableList = document.getElementById(`tables-${db}`);
+            const tables = tablesCache[db] || [];
+            
+            if (tables.length === 0) {
+                tableList.innerHTML = '<div style="padding: 16px; color: #999; font-size: 12px;">该数据库没有表</div>';
+                return;
+            }
+            
+            let html = '';
+            tables.forEach(table => {
+                const isSelected = selectedSyncObjects[db] && selectedSyncObjects[db].includes(table.name);
+                html += `
+                    <div class="table-item">
+                        <span class="table-name">${table.name}</span>
+                        <span class="table-info">${table.rows} 行 | ${table.size}</span>
+                        <button class="table-add-btn" onclick="addTable('${db}', '${table.name}')" ${isSelected ? 'disabled style="opacity: 0.5;"' : ''}>
+                            ${isSelected ? '已选择' : '选择'}
+                        </button>
+                    </div>
+                `;
+            });
+            
+            tableList.innerHTML = html;
+        }
+        
+        // 选择所有表
+        function selectAllTables(db, checked) {
+            if (checked) {
+                // 添加该数据库的所有表
+                if (tablesCache[db]) {
+                    if (!selectedSyncObjects[db]) {
+                        selectedSyncObjects[db] = [];
+                    }
+                    tablesCache[db].forEach(table => {
+                        if (!selectedSyncObjects[db].includes(table.name)) {
+                            selectedSyncObjects[db].push(table.name);
+                        }
+                    });
+                }
+            } else {
+                // 移除该数据库的所有表
+                delete selectedSyncObjects[db];
+            }
+            renderTables(db);
+            renderSelectedObjects();
+        }
+        
+        // 添加表到选择列表
+        function addTable(db, tableName) {
+            if (!selectedSyncObjects[db]) {
+                selectedSyncObjects[db] = [];
+            }
+            if (!selectedSyncObjects[db].includes(tableName)) {
+                selectedSyncObjects[db].push(tableName);
+            }
+            renderTables(db);
+            renderSelectedObjects();
+        }
+        
+        // 从选择列表移除表
+        function removeTable(db, tableName) {
+            if (selectedSyncObjects[db]) {
+                const index = selectedSyncObjects[db].indexOf(tableName);
+                if (index > -1) {
+                    selectedSyncObjects[db].splice(index, 1);
+                }
+                if (selectedSyncObjects[db].length === 0) {
+                    delete selectedSyncObjects[db];
+                }
+            }
+            renderSelectedObjects();
+            
+            // 更新源列表中的按钮状态
+            if (tablesCache[db]) {
+                renderTables(db);
+            }
+        }
+        
+        // 渲染已选择的对象
+        function renderSelectedObjects() {
+            const selectedList = document.getElementById('selectedObjectsList');
+            const emptySelection = document.getElementById('emptySelection');
+            
+            const dbNames = Object.keys(selectedSyncObjects);
+            if (dbNames.length === 0) {
+                selectedList.innerHTML = '<div class="empty-selection">暂未选择任何对象</div>';
+                return;
+            }
+            
+            let html = '';
+            dbNames.forEach(db => {
+                selectedSyncObjects[db].forEach(tableName => {
+                    html += `
+                        <div class="selected-item">
+                            <span class="selected-db-name">${db}.</span>
+                            <span class="selected-table-name">${tableName}</span>
+                            <button class="remove-btn" onclick="removeTable('${db}', '${tableName}')">移除</button>
+                        </div>
+                    `;
+                });
+            });
+            
+            selectedList.innerHTML = html;
+        }
+        
         // 创建任务
         async function createTask() {
             if (!checkAuth()) return;
@@ -1404,7 +2510,6 @@
             const sourceConnection = document.getElementById('sourceConnection').value.trim();
             const targetConnection = document.getElementById('targetConnection').value.trim();
             
-            // 检查是否有输入框错误
             const sourceInput = document.getElementById('sourceConnection');
             const targetInput = document.getElementById('targetConnection');
             
@@ -1418,13 +2523,47 @@
                 return;
             }
             
-            // 获取选中的同步模式
+            if (!connectionTestStatus.source) {
+                showNotification('请先测试源数据库连接', 'error');
+                goToStep(1);
+                return;
+            }
+            
+            if (!connectionTestStatus.target) {
+                showNotification('请先测试目标数据库连接', 'error');
+                goToStep(1);
+                return;
+            }
+            
+            if (!validationPassed) {
+                showNotification('请先完成校验检查并确保所有检查项通过', 'error');
+                goToStep(3);
+                return;
+            }
+            
             const modeFull = document.getElementById('modeFull');
             const migrationMode = modeFull.checked ? 'full' : 'fullAndIncre';
             
             if (!name) {
                 showNotification('请输入任务名称', 'error');
+                goToStep(1);
                 return;
+            }
+            
+            let syncObjectsJson = null;
+            let sourceDbName = null;
+            
+            if (Object.keys(selectedSyncObjects).length > 0) {
+                const syncObjectsData = {};
+                Object.keys(selectedSyncObjects).forEach(db => {
+                    syncObjectsData[db] = { tables: selectedSyncObjects[db] };
+                });
+                syncObjectsJson = JSON.stringify(syncObjectsData);
+                
+                const match = sourceConnection.match(/\/([^\/]+)$/);
+                if (match) {
+                    sourceDbName = match[1];
+                }
             }
             
             isSubmitting = true;
@@ -1440,7 +2579,9 @@
                         name,
                         sourceConnection: sourceConnection || 'default-source',
                         targetConnection: targetConnection || 'default-target',
-                        migrationMode
+                        migrationMode,
+                        syncObjects: syncObjectsJson,
+                        sourceDbName
                     })
                 });
                 
@@ -1465,7 +2606,7 @@
             } finally {
                 isSubmitting = false;
                 confirmBtn.disabled = false;
-                confirmBtn.textContent = '创建';
+                confirmBtn.textContent = '创建任务';
             }
         }
         
@@ -1527,6 +2668,39 @@
             }
         }
         
+        // 结束任务
+        async function stopWorkflow(id) {
+            if (!checkAuth()) return;
+            
+            if (!confirm('确定要结束这个任务吗？结束后任务将标记为已完成。')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/workflows/${id}/stop`, {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+                
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('任务已结束', 'success');
+                    fetchWorkflows();
+                } else {
+                    showNotification(result.message || '结束失败', 'error');
+                }
+            } catch (error) {
+                console.error('结束任务失败:', error);
+                showNotification('结束任务失败', 'error');
+            }
+        }
+        
         // 显示任务详情
         async function showTaskDetail(id) {
             if (!checkAuth()) return;
@@ -1583,11 +2757,11 @@
                             </div>
                             
                             <div style="font-size: 13px; color: #666;">执行进度:</div>
-                            <div>
+                            <div style="display: flex; align-items: center;">
                                 <div class="progress-bar" style="width: 200px;">
                                     <div class="progress-fill" style="width: ${task.progress || 0}%"></div>
                                 </div>
-                                <span style="margin-left: 8px; font-size: 11px; color: #666;">${task.progress || 0}%</span>
+                                <span style="margin-left: 8px; font-size: 11px; color: #666; white-space: nowrap;">${task.progress || 0}%</span>
                             </div>
                             
                             <div style="font-size: 13px; color: #666;">是否计费中:</div>
@@ -1690,13 +2864,335 @@
             document.getElementById('sourceConnection').value = '';
             document.getElementById('targetConnection').value = '';
             
-            // 清除错误状态
             const sourceInput = document.getElementById('sourceConnection');
             const targetInput = document.getElementById('targetConnection');
             sourceInput.classList.remove('error');
             targetInput.classList.remove('error');
             sourceInput.placeholder = '例如：mysql://user:pass@host:port/db';
             targetInput.placeholder = '例如：mysql://user:pass@host:port/db';
+            
+            connectionTestStatus = { source: null, target: null };
+            document.getElementById('sourceConnectionStatus').className = 'connection-status';
+            document.getElementById('sourceConnectionStatus').textContent = '';
+            document.getElementById('targetConnectionStatus').className = 'connection-status';
+            document.getElementById('targetConnectionStatus').textContent = '';
+            
+            validationPassed = false;
+            document.getElementById('validationResult').innerHTML = '<div class="validation-empty">请点击"开始校验"按钮进行数据库同步条件检查</div>';
+        }
+        
+        let validationCurrentPage = 0;
+        let validationPageSize = 10;
+        let availableWorkflows = [];
+        
+        function switchPage(page) {
+            console.log('switchPage called with:', page);
+            const menuItems = document.querySelectorAll('.menu-item');
+            menuItems.forEach(item => item.classList.remove('active'));
+            
+            if (page === 'sync') {
+                document.getElementById('syncPage').style.display = 'block';
+                document.getElementById('validationPage').style.display = 'none';
+                menuItems[0].classList.add('active');
+            } else if (page === 'validation') {
+                console.log('Switching to validation page');
+                document.getElementById('syncPage').style.display = 'none';
+                document.getElementById('validationPage').style.display = 'block';
+                menuItems[1].classList.add('active');
+                fetchValidationTasks();
+            }
+        }
+        
+        async function fetchValidationTasks() {
+            if (!checkAuth()) return;
+            
+            console.log('Fetching validation tasks...');
+            console.log('Token:', localStorage.getItem('token'));
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/validation-tasks?page=${validationCurrentPage}&size=${validationPageSize}`, {
+                    headers: getAuthHeaders()
+                });
+                
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+                
+                if (!response.ok) {
+                    showNotification(`请求失败: ${response.status}`, 'error');
+                    return;
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    renderValidationTasks(result.data);
+                } else {
+                    showNotification(result.message || '获取校验任务列表失败', 'error');
+                }
+            } catch (error) {
+                console.error('获取校验任务列表失败:', error);
+                showNotification('获取校验任务列表失败: ' + error.message, 'error');
+            }
+        }
+        
+        function getValidationStatusClass(status) {
+            switch(status) {
+                case 'PENDING': return 'status-pending';
+                case 'RUNNING': return 'status-running';
+                case 'COMPLETED': return 'status-completed';
+                case 'FAILED': return 'status-failed';
+                default: return '';
+            }
+        }
+        
+        function getValidationStatusText(status) {
+            switch(status) {
+                case 'PENDING': return '等待中';
+                case 'RUNNING': return '校验中';
+                case 'COMPLETED': return '已完成';
+                case 'FAILED': return '失败';
+                default: return status;
+            }
+        }
+        
+        function renderValidationTasks(data) {
+            const taskList = document.getElementById('validationTaskList');
+            
+            if (!data.content || data.content.length === 0) {
+                taskList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="15" y="25" width="50" height="40" rx="2" stroke="#d9d9d9" stroke-width="2" fill="none"/>
+                                <rect x="20" y="20" width="40" height="8" rx="1" stroke="#d9d9d9" stroke-width="2" fill="none"/>
+                            </svg>
+                        </div>
+                        <div class="empty-text">暂无校验任务</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            data.content.forEach(task => {
+                const statusClass = getValidationStatusClass(task.status);
+                const statusText = getValidationStatusText(task.status);
+                const progress = task.totalTables > 0 
+                    ? `${task.passedTables || 0}/${task.totalTables} 表通过` 
+                    : '-';
+                
+                html += `
+                    <div class="table-row">
+                        <div class="table-cell col-name">${task.name}</div>
+                        <div class="table-cell col-status">
+                            <span class="status-badge ${statusClass}">${statusText}</span>
+                        </div>
+                        <div class="table-cell col-progress">${progress}</div>
+                        <div class="table-cell col-time">${formatDateTime(task.createdAt)}</div>
+                        <div class="table-cell col-action">
+                            <div class="action-btns">
+                                <button class="action-btn" onclick="viewValidationDetail('${task.id}')">详情</button>
+                                ${task.status === 'COMPLETED' || task.status === 'FAILED' 
+                                    ? `<button class="action-btn delete" onclick="deleteValidationTask('${task.id}')">删除</button>` 
+                                    : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            taskList.innerHTML = html;
+            renderValidationPagination(data);
+        }
+        
+        function renderValidationPagination(data) {
+            const totalElements = data.totalElements || 0;
+            const totalPages = data.totalPages || 0;
+            const currentPage = data.currentPage || 0;
+            
+            document.getElementById('validationPaginationInfo').textContent = `总条数：${totalElements}`;
+            
+            const pageNumbers = document.getElementById('validationPageNumbers');
+            let html = '';
+            
+            for (let i = 0; i < totalPages; i++) {
+                html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goToValidationPage(${i})">${i + 1}</button>`;
+            }
+            pageNumbers.innerHTML = html;
+            
+            document.getElementById('validationPrevPageBtn').disabled = currentPage === 0;
+            document.getElementById('validationNextPageBtn').disabled = currentPage >= totalPages - 1;
+        }
+        
+        function goToValidationPage(page) {
+            validationCurrentPage = page;
+            fetchValidationTasks();
+        }
+        
+        async function openCreateValidationModal() {
+            if (!checkAuth()) return;
+            
+            const select = document.getElementById('validationWorkflowSelect');
+            select.innerHTML = '<option value="">加载中...</option>';
+            document.getElementById('validationWorkflowInfo').style.display = 'none';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/validation-tasks/available-workflows`, {
+                    headers: getAuthHeaders()
+                });
+                
+                const result = await response.json();
+                
+                if (result.success && result.data) {
+                    availableWorkflows = result.data;
+                    
+                    if (result.data.length === 0) {
+                        select.innerHTML = '<option value="">没有增量同步中的任务</option>';
+                    } else {
+                        let options = '<option value="">请选择增量同步中的任务</option>';
+                        result.data.forEach(w => {
+                            options += `<option value="${w.id}">${w.name}</option>`;
+                        });
+                        select.innerHTML = options;
+                    }
+                } else {
+                    select.innerHTML = '<option value="">加载失败</option>';
+                }
+            } catch (error) {
+                console.error('加载可用任务失败:', error);
+                select.innerHTML = '<option value="">加载失败</option>';
+            }
+            
+            document.getElementById('createValidationModal').classList.add('show');
+        }
+        
+        document.getElementById('validationWorkflowSelect').addEventListener('change', function() {
+            const selectedId = this.value;
+            const infoDiv = document.getElementById('validationWorkflowInfo');
+            
+            if (selectedId) {
+                const workflow = availableWorkflows.find(w => w.id === selectedId);
+                if (workflow) {
+                    document.getElementById('validationSelectedName').textContent = workflow.name;
+                    document.getElementById('validationSelectedStatus').textContent = statusMap[workflow.status]?.text || workflow.status;
+                    infoDiv.style.display = 'block';
+                }
+            } else {
+                infoDiv.style.display = 'none';
+            }
+        });
+        
+        async function createValidationTask() {
+            const workflowId = document.getElementById('validationWorkflowSelect').value;
+            
+            if (!workflowId) {
+                showNotification('请选择增量同步任务', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/validation-tasks`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ workflowId })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('校验任务创建成功', 'success');
+                    document.getElementById('createValidationModal').classList.remove('show');
+                    fetchValidationTasks();
+                } else {
+                    showNotification(result.message || '创建失败', 'error');
+                }
+            } catch (error) {
+                console.error('创建校验任务失败:', error);
+                showNotification('创建校验任务失败', 'error');
+            }
+        }
+        
+        async function viewValidationDetail(id) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/validation-tasks/${id}`, {
+                    headers: getAuthHeaders()
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const task = result.data;
+                    const statusClass = getValidationStatusClass(task.status);
+                    const statusText = getValidationStatusText(task.status);
+                    
+                    const detailHtml = `
+                        <div style="padding: 8px 0;">
+                            <div style="margin-bottom: 16px;">
+                                <div style="font-weight: 500; margin-bottom: 8px;">基本信息</div>
+                                <div style="font-size: 13px; color: #666; line-height: 1.8;">
+                                    <div>任务名称：${task.name}</div>
+                                    <div>关联同步任务：${task.workflowName || '-'}</div>
+                                    <div>状态：<span class="status-badge ${statusClass}">${statusText}</span></div>
+                                    <div>创建时间：${formatDateTime(task.createdAt)}</div>
+                                    ${task.startedAt ? `<div>开始时间：${formatDateTime(task.startedAt)}</div>` : ''}
+                                    ${task.completedAt ? `<div>完成时间：${formatDateTime(task.completedAt)}</div>` : ''}
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 16px;">
+                                <div style="font-weight: 500; margin-bottom: 8px;">校验结果</div>
+                                <div style="font-size: 13px; color: #666; line-height: 1.8;">
+                                    <div>总表数：${task.totalTables || '-'}</div>
+                                    <div>通过表数：${task.passedTables || 0}</div>
+                                    <div>失败表数：${task.failedTables || 0}</div>
+                                    <div>总行数：${task.totalRows || 0}</div>
+                                    <div>差异行数：${task.mismatchedRows || 0}</div>
+                                </div>
+                            </div>
+                            ${task.errorMessage ? `
+                            <div>
+                                <div style="font-weight: 500; margin-bottom: 8px; color: #f5222d;">错误信息</div>
+                                <div style="font-size: 13px; color: #f5222d; background: #fff2f0; padding: 8px 12px; border-radius: 4px;">
+                                    ${task.errorMessage}
+                                </div>
+                            </div>
+                            ` : ''}
+                        </div>
+                    `;
+                    
+                    document.getElementById('validationDetailBody').innerHTML = detailHtml;
+                    document.getElementById('validationDetailModal').classList.add('show');
+                } else {
+                    showNotification(result.message || '获取详情失败', 'error');
+                }
+            } catch (error) {
+                console.error('获取校验任务详情失败:', error);
+                showNotification('获取详情失败', 'error');
+            }
+        }
+        
+        async function deleteValidationTask(id) {
+            if (!confirm('确定要删除这个校验任务吗？')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/validation-tasks/${id}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('校验任务已删除', 'success');
+                    fetchValidationTasks();
+                } else {
+                    showNotification(result.message || '删除失败', 'error');
+                }
+            } catch (error) {
+                console.error('删除校验任务失败:', error);
+                showNotification('删除失败', 'error');
+            }
         }
         
         // 事件监听
@@ -1728,18 +3224,190 @@
             }
         });
         
+        document.getElementById('closeValidationModal').addEventListener('click', () => {
+            document.getElementById('createValidationModal').classList.remove('show');
+        });
+        document.getElementById('cancelValidationBtn').addEventListener('click', () => {
+            document.getElementById('createValidationModal').classList.remove('show');
+        });
+        
+        document.getElementById('closeValidationDetailModal').addEventListener('click', () => {
+            document.getElementById('validationDetailModal').classList.remove('show');
+        });
+        document.getElementById('closeValidationDetailBtn').addEventListener('click', () => {
+            document.getElementById('validationDetailModal').classList.remove('show');
+        });
+        
+        document.getElementById('createValidationModal').addEventListener('click', (e) => {
+            if (e.target.id === 'createValidationModal') {
+                document.getElementById('createValidationModal').classList.remove('show');
+            }
+        });
+        
+        document.getElementById('validationDetailModal').addEventListener('click', (e) => {
+            if (e.target.id === 'validationDetailModal') {
+                document.getElementById('validationDetailModal').classList.remove('show');
+            }
+        });
+        
         // 页面加载时获取任务列表
+        function initFilterDropdown() {
+            const searchBox = document.getElementById('searchBox');
+            const searchInput = document.getElementById('searchInput');
+            const filterDropdown = document.getElementById('filterDropdown');
+            const statusDropdown = document.getElementById('statusDropdown');
+            const filterTags = document.getElementById('filterTags');
+            
+            searchInput.addEventListener('focus', () => {
+                if (!activeFilterType) {
+                    filterDropdown.classList.add('show');
+                }
+            });
+            
+            searchInput.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (!activeFilterType) {
+                    filterDropdown.classList.add('show');
+                }
+            });
+            
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.search-box-wrapper')) {
+                    filterDropdown.classList.remove('show');
+                    statusDropdown.classList.remove('show');
+                }
+            });
+            
+            document.querySelectorAll('.filter-option').forEach(option => {
+                option.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const filterType = option.dataset.filter;
+                    
+                    filterDropdown.classList.remove('show');
+                    
+                    if (filterType === 'keyword') {
+                        activeFilterType = 'keyword';
+                        searchInput.placeholder = '输入任务名称或ID...';
+                        searchInput.focus();
+                    } else if (filterType === 'status') {
+                        statusDropdown.classList.add('show');
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.status-option').forEach(option => {
+                option.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const status = option.dataset.status;
+                    const statusText = option.textContent;
+                    
+                    filterStatus = status;
+                    addFilterTag('状态', statusText, 'status');
+                    statusDropdown.classList.remove('show');
+                    searchInput.placeholder = '添加筛选条件';
+                    
+                    currentPage = 1;
+                    fetchWorkflows();
+                });
+            });
+            
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && activeFilterType === 'keyword') {
+                    const value = searchInput.value.trim();
+                    if (value) {
+                        filterKeyword = value;
+                        addFilterTag('任务名称/ID', value, 'keyword');
+                        searchInput.value = '';
+                        searchInput.placeholder = '添加筛选条件';
+                        activeFilterType = null;
+                        
+                        currentPage = 1;
+                        fetchWorkflows();
+                    }
+                } else if (e.key === 'Escape') {
+                    activeFilterType = null;
+                    searchInput.placeholder = '添加筛选条件';
+                    filterDropdown.classList.remove('show');
+                }
+            });
+        }
+        
+        function addFilterTag(label, value, type) {
+            const filterTags = document.getElementById('filterTags');
+            const tag = document.createElement('span');
+            tag.className = 'filter-tag';
+            tag.dataset.type = type;
+            tag.innerHTML = `${label}：${value}<span class="tag-remove" onclick="removeFilterTag('${type}')">×</span>`;
+            filterTags.appendChild(tag);
+        }
+        
+        function removeFilterTag(type) {
+            const filterTags = document.getElementById('filterTags');
+            const tag = filterTags.querySelector(`[data-type="${type}"]`);
+            if (tag) {
+                tag.remove();
+            }
+            
+            if (type === 'keyword') {
+                filterKeyword = null;
+            } else if (type === 'status') {
+                filterStatus = null;
+            }
+            
+            currentPage = 1;
+            fetchWorkflows();
+        }
+        
+        function clearAllFilters() {
+            filterKeyword = null;
+            filterStatus = null;
+            activeFilterType = null;
+            isViewingFailedTasks = false;
+            
+            const filterTags = document.getElementById('filterTags');
+            filterTags.innerHTML = '';
+            
+            const searchInput = document.getElementById('searchInput');
+            searchInput.value = '';
+            searchInput.placeholder = '添加筛选条件';
+            
+            document.getElementById('viewFailedTasksBtn').textContent = '查看异常任务';
+        }
+        
         document.addEventListener('DOMContentLoaded', () => {
-            // 检查登录状态并显示用户信息
             if (checkAuth()) {
                 displayUserInfo();
                 updateSortIcons();
                 fetchWorkflows();
                 connectWebSocket();
+                initFilterDropdown();
             }
             
-            // 定时刷新任务状态
-            setInterval(fetchWorkflows, 5000);
+            document.getElementById('viewFailedTasksBtn').addEventListener('click', () => {
+                if (isViewingFailedTasks) {
+                    clearAllFilters();
+                    fetchWorkflows();
+                } else {
+                    clearAllFilters();
+                    fetchFailedWorkflows();
+                }
+            });
+            
+            document.getElementById('refreshBtn').addEventListener('click', () => {
+                if (isViewingFailedTasks) {
+                    fetchFailedWorkflows();
+                } else {
+                    fetchWorkflows();
+                }
+            });
+            
+            setInterval(() => {
+                if (isViewingFailedTasks) {
+                    fetchFailedWorkflows();
+                } else {
+                    fetchWorkflows();
+                }
+            }, 5000);
         });
     </script>
 </body>

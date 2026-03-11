@@ -48,6 +48,30 @@ public class Workflow {
     @Column(name = "is_deleted")
     private Boolean isDeleted = false;
 
+    @Column(name = "sync_objects", columnDefinition = "TEXT")
+    private String syncObjects;
+
+    @Column(name = "source_db_name")
+    private String sourceDbName;
+
+    @Column(name = "total_tables")
+    private Integer totalTables;
+
+    @Column(name = "completed_tables")
+    private Integer completedTables;
+
+    @Column(name = "current_table")
+    private String currentTable;
+
+    @Column(name = "current_table_progress")
+    private Integer currentTableProgress;
+
+    @Column(name = "current_table_rows")
+    private Long currentTableRows;
+
+    @Column(name = "current_table_total_rows")
+    private Long currentTableTotalRows;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -169,5 +193,69 @@ public class Workflow {
 
     public void setIsDeleted(Boolean isDeleted) {
         this.isDeleted = isDeleted;
+    }
+
+    public String getSyncObjects() {
+        return syncObjects;
+    }
+
+    public void setSyncObjects(String syncObjects) {
+        this.syncObjects = syncObjects;
+    }
+
+    public String getSourceDbName() {
+        return sourceDbName;
+    }
+
+    public void setSourceDbName(String sourceDbName) {
+        this.sourceDbName = sourceDbName;
+    }
+
+    public Integer getTotalTables() {
+        return totalTables;
+    }
+
+    public void setTotalTables(Integer totalTables) {
+        this.totalTables = totalTables;
+    }
+
+    public Integer getCompletedTables() {
+        return completedTables;
+    }
+
+    public void setCompletedTables(Integer completedTables) {
+        this.completedTables = completedTables;
+    }
+
+    public String getCurrentTable() {
+        return currentTable;
+    }
+
+    public void setCurrentTable(String currentTable) {
+        this.currentTable = currentTable;
+    }
+
+    public Integer getCurrentTableProgress() {
+        return currentTableProgress;
+    }
+
+    public void setCurrentTableProgress(Integer currentTableProgress) {
+        this.currentTableProgress = currentTableProgress;
+    }
+
+    public Long getCurrentTableRows() {
+        return currentTableRows;
+    }
+
+    public void setCurrentTableRows(Long currentTableRows) {
+        this.currentTableRows = currentTableRows;
+    }
+
+    public Long getCurrentTableTotalRows() {
+        return currentTableTotalRows;
+    }
+
+    public void setCurrentTableTotalRows(Long currentTableTotalRows) {
+        this.currentTableTotalRows = currentTableTotalRows;
     }
 }

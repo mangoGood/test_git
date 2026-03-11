@@ -7,6 +7,8 @@ import com.migration.agent.service.KafkaProducerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.sql.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MigrationAgentThread implements Runnable {
@@ -19,6 +21,7 @@ public class MigrationAgentThread implements Runnable {
     private static final long BINLOG_MONITOR_INTERVAL = 30000;
     private static final long INCREMENT_MONITOR_INTERVAL = 30000;
     private static final long STATUS_REPORT_INTERVAL = 60000;
+    private static final long PROGRESS_MONITOR_INTERVAL = 3000;
     
     private final TaskMessage taskMessage;
     private final KafkaProducerService kafkaProducer;
@@ -33,6 +36,10 @@ public class MigrationAgentThread implements Runnable {
     
     private Thread binlogMonitorThread;
     private Thread incrementMonitorThread;
+    private Thread fullMigrationMonitorThread;
+    
+    private int totalTables = 0;
+    private volatile int completedTables = 0;
     
     public MigrationAgentThread(TaskMessage taskMessage, KafkaProducerService kafkaProducer) {
         this(taskMessage, kafkaProducer, false);
@@ -131,6 +138,10 @@ public class MigrationAgentThread implements Runnable {
                         }
                         
                         if (!binlogProcess.isRunning()) {
+                            if (stopped.get()) {
+                                logger.info("[{}] binlog 进程已停止（暂停）", threadName);
+                                break;
+                            }
                             logger.error("[{}] binlog 进程异常退出", threadName);
                             sendStatus("FAILED", "binlog 进程异常退出", 0);
                             running.set(false);
@@ -166,13 +177,24 @@ public class MigrationAgentThread implements Runnable {
             fullProcess.setTaskId(taskId);
             fullProcess.start();
             
-            sendStatus("FULL_MIGRATING", "全量同步中", 0);
+            sendStatus("FULL_MIGRATING", "全量同步中", 0, 0, 0, null, 0, 0L, 0L);
+            
+            startFullMigrationMonitor();
             
             int exitCode = fullProcess.waitFor();
             
+            if (fullMigrationMonitorThread != null) {
+                fullMigrationMonitorThread.interrupt();
+            }
+            
+            if (stopped.get()) {
+                logger.info("[{}] 全量迁移被暂停", threadName);
+                return false;
+            }
+            
             if (exitCode == 0) {
                 logger.info("[{}] 全量迁移完成", threadName);
-                sendStatus("FULL_COMPLETED", "全量同步完成", 100);
+                sendStatus("FULL_COMPLETED", "全量同步完成", 100, totalTables, totalTables, null, 100, 0L, 0L);
                 return true;
             } else {
                 logger.error("[{}] 全量迁移失败，退出码: {}", threadName, exitCode);
@@ -182,11 +204,93 @@ public class MigrationAgentThread implements Runnable {
             }
             
         } catch (Exception e) {
+            if (stopped.get()) {
+                logger.info("[{}] 全量迁移被暂停（异常捕获）", threadName);
+                return false;
+            }
             logger.error("[{}] 全量迁移执行异常", threadName, e);
             sendStatus("FAILED", "全量迁移执行异常: " + e.getMessage(), 0);
             running.set(false);
             return false;
         }
+    }
+    
+    private void startFullMigrationMonitor() {
+        fullMigrationMonitorThread = new Thread(() -> {
+            String progressDbUrl = "jdbc:h2:./files/" + taskId + "/migration_progress;MODE=MySQL;AUTO_SERVER=TRUE";
+            long lastReportTime = 0;
+            
+            while (running.get() && fullProcess != null && fullProcess.isRunning()) {
+                try {
+                    Thread.sleep(PROGRESS_MONITOR_INTERVAL);
+                    
+                    if (!running.get() || stopped.get()) {
+                        break;
+                    }
+                    
+                    long currentTime = System.currentTimeMillis();
+                    
+                    try (Connection conn = DriverManager.getConnection(progressDbUrl, "sa", "")) {
+                        String countSql = "SELECT COUNT(*) FROM migration_progress";
+                        try (Statement stmt = conn.createStatement();
+                             ResultSet rs = stmt.executeQuery(countSql)) {
+                            if (rs.next()) {
+                                totalTables = rs.getInt(1);
+                            }
+                        }
+                        
+                        String completedSql = "SELECT COUNT(*) FROM migration_progress WHERE status = 'COMPLETED'";
+                        try (Statement stmt = conn.createStatement();
+                             ResultSet rs = stmt.executeQuery(completedSql)) {
+                            if (rs.next()) {
+                                completedTables = rs.getInt(1);
+                            }
+                        }
+                        
+                        String currentTableSql = "SELECT table_name, total_rows, migrated_rows, status FROM migration_progress WHERE status = 'IN_PROGRESS' LIMIT 1";
+                        String currentTable = null;
+                        long currentTableRows = 0;
+                        long currentTableTotalRows = 0;
+                        int currentTableProgress = 0;
+                        
+                        try (Statement stmt = conn.createStatement();
+                             ResultSet rs = stmt.executeQuery(currentTableSql)) {
+                            if (rs.next()) {
+                                currentTable = rs.getString("table_name");
+                                currentTableTotalRows = rs.getLong("total_rows");
+                                currentTableRows = rs.getLong("migrated_rows");
+                                if (currentTableTotalRows > 0) {
+                                    currentTableProgress = (int) ((currentTableRows * 100) / currentTableTotalRows);
+                                }
+                            }
+                        }
+                        
+                        int overallProgress = 0;
+                        if (totalTables > 0) {
+                            overallProgress = (completedTables * 100) / totalTables;
+                        }
+                        
+                        sendStatus("FULL_MIGRATING", "全量同步中", overallProgress, 
+                            totalTables, completedTables, currentTable, currentTableProgress, 
+                            currentTableRows, currentTableTotalRows);
+                        
+                        logger.debug("[{}] 全量同步进度: {}/{}, 当前表: {} ({}%)", 
+                            taskId, completedTables, totalTables, currentTable, currentTableProgress);
+                        
+                    } catch (SQLException e) {
+                        logger.debug("[{}] 读取迁移进度失败: {}", taskId, e.getMessage());
+                    }
+                    
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                } catch (Exception e) {
+                    logger.error("[{}] 全量迁移监控异常", taskId, e);
+                }
+            }
+        }, "FullMigrationMonitor-" + taskId);
+        fullMigrationMonitorThread.setDaemon(true);
+        fullMigrationMonitorThread.start();
     }
     
     private boolean startIncrementProcess() {
@@ -221,6 +325,10 @@ public class MigrationAgentThread implements Runnable {
                         }
                         
                         if (!incrementProcess.isRunning()) {
+                            if (stopped.get()) {
+                                logger.info("[{}] 增量同步进程已停止（暂停）", threadName);
+                                break;
+                            }
                             logger.error("[{}] 增量同步进程异常退出", threadName);
                             sendStatus("FAILED", "增量同步进程异常退出", 100);
                             running.set(false);
@@ -314,11 +422,23 @@ public class MigrationAgentThread implements Runnable {
     }
     
     private void sendStatus(String status, String message, int progress) {
+        sendStatus(status, message, progress, null, null, null, null, null, null);
+    }
+    
+    private void sendStatus(String status, String message, int progress, 
+            Integer totalTables, Integer completedTables, String currentTable, 
+            Integer currentTableProgress, Long currentTableRows, Long currentTableTotalRows) {
         TaskStatusMessage statusMessage = new TaskStatusMessage();
         statusMessage.setTaskId(taskId);
         statusMessage.setStatus(status);
         statusMessage.setMessage(message);
         statusMessage.setProgress(progress);
+        statusMessage.setTotalTables(totalTables);
+        statusMessage.setCompletedTables(completedTables);
+        statusMessage.setCurrentTable(currentTable);
+        statusMessage.setCurrentTableProgress(currentTableProgress);
+        statusMessage.setCurrentTableRows(currentTableRows);
+        statusMessage.setCurrentTableTotalRows(currentTableTotalRows);
         
         kafkaProducer.sendStatus(statusMessage);
     }
