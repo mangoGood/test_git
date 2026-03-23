@@ -171,6 +171,8 @@ public class AgentMain {
         
         if ("stop".equals(messageType)) {
             taskExecutor.submit(() -> handleStopMessage(taskMessage));
+        } else if ("terminate".equals(messageType)) {
+            taskExecutor.submit(() -> handleTerminateMessage(taskMessage));
         } else if ("resume".equals(messageType)) {
             taskExecutor.submit(() -> handleResumeMessage(taskMessage));
         } else if ("delete".equals(messageType)) {
@@ -233,6 +235,23 @@ public class AgentMain {
         } catch (Exception e) {
             logger.error("Error handling stop message for task: {}", taskId, e);
             pausedTasks.remove(taskId);
+        }
+    }
+    
+    private void handleTerminateMessage(TaskMessage taskMessage) {
+        String taskId = taskMessage.getTaskId();
+        logger.info("Handling terminate message for task: {}", taskId);
+        
+        pausedTasks.remove(taskId);
+        
+        try {
+            stopTaskById(taskId);
+            stopMigrationAgentThread(taskId);
+            
+            logger.info("Task {} terminated, all processes stopped", taskId);
+            
+        } catch (Exception e) {
+            logger.error("Error handling terminate message for task: {}", taskId, e);
         }
     }
     

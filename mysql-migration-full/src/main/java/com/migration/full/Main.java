@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Set;
 
 /**
  * MySQL 数据库全量迁移工具主程序
@@ -65,19 +66,31 @@ public class Main {
             }
 
             // 记录源数据库快照位点（用于增量同步）
+            // 只有在配置允许时才记录，agent 已经在启动前记录了 checkpoint
             String checkpointDbPath = config.getCheckpointDbPath();
-            if (checkpointDbPath != null && !checkpointDbPath.isEmpty()) {
+            if (checkpointDbPath != null && !checkpointDbPath.isEmpty() && config.isRecordCheckpoint()) {
                 CheckpointRecorder checkpointRecorder = new CheckpointRecorder(checkpointDbPath);
                 try {
                     checkpointRecorder.recordSnapshot(sourceConn);
                 } finally {
                     checkpointRecorder.close();
                 }
+            } else {
+                logger.info("跳过 checkpoint 记录（已由 agent 在启动前记录）");
             }
 
             // 读取源数据库元数据
             MetadataReader metadataReader = new MetadataReader(sourceConn);
-            List<TableInfo> tables = metadataReader.getAllTablesInfo();
+            
+            List<TableInfo> tables;
+            Set<String> includedTables = config.getIncludedTables();
+            
+            if (includedTables != null && !includedTables.isEmpty()) {
+                logger.info("使用同步对象过滤，共指定 {} 个表", includedTables.size());
+                tables = metadataReader.getFilteredTablesInfo(includedTables);
+            } else {
+                tables = metadataReader.getAllTablesInfo();
+            }
             
             if (tables.isEmpty()) {
                 logger.warn("源数据库中没有找到任何表");

@@ -6,6 +6,13 @@ public class TaskStatusMessage {
     private String message;
     private int progress;
     private long timestamp;
+    
+    private Integer totalTables;
+    private Integer completedTables;
+    private String currentTable;
+    private Integer currentTableProgress;
+    private Long currentTableRows;
+    private Long currentTableTotalRows;
 
     public TaskStatusMessage() {
         this.timestamp = System.currentTimeMillis();
@@ -49,5 +56,53 @@ public class TaskStatusMessage {
 
     public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
+    }
+
+    public Integer getTotalTables() {
+        return totalTables;
+    }
+
+    public void setTotalTables(Integer totalTables) {
+        this.totalTables = totalTables;
+    }
+
+    public Integer getCompletedTables() {
+        return completedTables;
+    }
+
+    public void setCompletedTables(Integer completedTables) {
+        this.completedTables = completedTables;
+    }
+
+    public String getCurrentTable() {
+        return currentTable;
+    }
+
+    public void setCurrentTable(String currentTable) {
+        this.currentTable = currentTable;
+    }
+
+    public Integer getCurrentTableProgress() {
+        return currentTableProgress;
+    }
+
+    public void setCurrentTableProgress(Integer currentTableProgress) {
+        this.currentTableProgress = currentTableProgress;
+    }
+
+    public Long getCurrentTableRows() {
+        return currentTableRows;
+    }
+
+    public void setCurrentTableRows(Long currentTableRows) {
+        this.currentTableRows = currentTableRows;
+    }
+
+    public Long getCurrentTableTotalRows() {
+        return currentTableTotalRows;
+    }
+
+    public void setCurrentTableTotalRows(Long currentTableTotalRows) {
+        this.currentTableTotalRows = currentTableTotalRows;
     }
 }

@@ -1,6 +1,7 @@
 package com.synctask.repository;
 
 import com.synctask.entity.Workflow;
+import com.synctask.entity.WorkflowStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -8,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface WorkflowRepository extends JpaRepository<Workflow, String> {
@@ -15,7 +17,24 @@ public interface WorkflowRepository extends JpaRepository<Workflow, String> {
     Page<Workflow> findByUserId(@Param("userId") Long userId, Pageable pageable);
     
     List<Workflow> findByUserId(Long userId);
-    List<Workflow> findByUserIdAndStatus(Long userId, com.synctask.entity.WorkflowStatus status);
+    List<Workflow> findByUserIdAndStatus(Long userId, WorkflowStatus status);
     
     List<Workflow> findByUserIdAndIsDeletedFalse(Long userId);
+    
+    List<Workflow> findByUserIdAndIsDeletedFalseOrderByCreatedAtDesc(Long userId);
+    
+    Optional<Workflow> findByIdAndUserIdAndIsDeletedFalse(String id, Long userId);
+    
+    @Query("SELECT w FROM Workflow w WHERE w.userId = :userId AND w.isDeleted = false AND " +
+           "(LOWER(w.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(w.id) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    Page<Workflow> findByUserIdAndKeyword(@Param("userId") Long userId, @Param("keyword") String keyword, Pageable pageable);
+    
+    @Query("SELECT w FROM Workflow w WHERE w.userId = :userId AND w.isDeleted = false AND w.status = :status")
+    Page<Workflow> findByUserIdAndStatus(@Param("userId") Long userId, @Param("status") WorkflowStatus status, Pageable pageable);
+    
+    @Query("SELECT w FROM Workflow w WHERE w.userId = :userId AND w.isDeleted = false AND " +
+           "(LOWER(w.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(w.id) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND w.status = :status")
+    Page<Workflow> findByUserIdAndKeywordAndStatus(@Param("userId") Long userId, @Param("keyword") String keyword, @Param("status") WorkflowStatus status, Pageable pageable);
+    
+    List<Workflow> findByUserIdAndStatusAndIsDeletedFalse(Long userId, WorkflowStatus status);
 }
